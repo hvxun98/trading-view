@@ -41,6 +41,7 @@ import { PositionSettingsDialog } from './PositionSettingsDialog'
 import { TextEditor } from './TextEditor'
 import { translate, useT } from '../i18n'
 import { Legend } from './Legend'
+import { usePriceTitle } from '../hooks/usePriceTitle'
 
 const BAR_SPACING = 8
 const RIGHT_OFFSET = 10
@@ -982,6 +983,7 @@ export function Chart() {
   const shown = hovered ?? last
   const data = visibleData()
   const shownPrev = hovered ? prevClose : (data.at(-2)?.close ?? null)
+  usePriceTitle(symbol, last, data.at(-2)?.close ?? null)
 
   return (
     <div

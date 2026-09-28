@@ -54,6 +54,7 @@ Token chỉ được lưu trong localStorage của trình duyệt.
 - Object Tree (panel phải): danh sách hình vẽ, click để chọn, ẩn / khoá / xoá từng hình hoặc xoá tất cả
 - Indicator RSI (14) trong pane riêng, vùng 30–70 như TradingView
 - Đảo ngược thang giá (Invert scale) — áp dụng cho cả pane RSI
+- Giá realtime trên tiêu đề tab trình duyệt: `XAUUSD 2345.67 ▲ +0.45%`
 - Song ngữ **English / Tiếng Việt** (nút 🌐 góc phải toolbar): áp dụng cho toàn bộ giao diện, kể cả nhãn vẽ trên chart (vị thế, thước đo) và ngày tháng trên trục thời gian; mặc định theo ngôn ngữ trình duyệt
 - Tự lưu symbol, khung thời gian, hình vẽ, indicator vào localStorage
 - Kéo sang trái để tải thêm lịch sử, nút `»` cuộn về nến mới nhất
