@@ -15,7 +15,13 @@ npm run build    # type-check + build production
 npm run lint     # oxlint
 ```
 
-## Dữ liệu OANDA (XAUUSD, forex)
+## Dữ liệu forex & kim loại (XAUUSD…)
+
+Mặc định lấy từ **Dukascopy Bank** (ngân hàng Thuỵ Sĩ, sàn ECN): nến spot BID cho XAU/USD, XAG/USD, XPT, XPD và các cặp forex chính,
+không cần đăng ký. Endpoint là JSONP của widget chart `freeserv.dukascopy.com/2.0/index.php?path=chart/json3`, yêu cầu header `Referer`
+nên đi qua proxy `/api/dukascopy` trong `vite.config.ts`. Nến cuối cập nhật mỗi 2 giây.
+
+### Tuỳ chọn: OANDA
 
 1. Tạo tài khoản demo miễn phí (fxTrade Practice) tại oanda.com, vào *Manage API Access* để tạo **API token**.
 2. Trong app: nút ⚙ **Nguồn dữ liệu** (góc phải toolbar) → chọn *Demo (practice)* → dán token → *Kiểm tra kết nối* → *Lưu*.
@@ -31,7 +37,7 @@ Token chỉ được lưu trong localStorage của trình duyệt.
 - Khung thời gian 1m, 5m, 15m, 1H, 4H, 1D, 3D, 1W, 1M
 - Tìm mã như TradingView (bấm tên mã hoặc gõ chữ bất kỳ trên chart): tab Tất cả / Crypto / Forex / Hàng hoá, toàn bộ cặp Binance + forex & kim loại OANDA
 - Watchlist: nút **+** thêm mã, **×** xoá mã, giá realtime (Binance WebSocket, OANDA hỏi định kỳ), lưu trong trình duyệt
-- **XAUUSD, XAGUSD, EURUSD…** từ OANDA v20 (cần token); chưa có token thì XAUUSD dùng PAXG/USDT của Binance làm nguồn thay thế
+- **XAUUSD, XAGUSD, EURUSD…** (giá spot, BID) từ **Dukascopy Bank** — miễn phí, không cần key; có token OANDA v20 thì ưu tiên OANDA
 - Đổi khung / symbol như TradingView: giữ nguyên độ zoom và vị trí đang xem, không trượt, không nháy trống
 - Thanh công cụ vẽ bên trái chia nhóm có menu con (như TradingView): trend line, ray, đường ngang/dọc, hình chữ nhật, Fibonacci
 - Thước đo (Measure / `Shift + click`): chênh lệch giá, %, tick, số nến, thời gian, volume
@@ -47,7 +53,7 @@ Token chỉ được lưu trong localStorage của trình duyệt.
 - Khoá / ẩn từng hình hoặc tất cả hình vẽ; Undo / Redo
 - Object Tree (panel phải): danh sách hình vẽ, click để chọn, ẩn / khoá / xoá từng hình hoặc xoá tất cả
 - Indicator RSI (14) trong pane riêng, vùng 30–70 như TradingView
-- Đảo ngược thang giá (Invert scale)
+- Đảo ngược thang giá (Invert scale) — áp dụng cho cả pane RSI
 - Song ngữ **English / Tiếng Việt** (nút 🌐 góc phải toolbar): áp dụng cho toàn bộ giao diện, kể cả nhãn vẽ trên chart (vị thế, thước đo) và ngày tháng trên trục thời gian; mặc định theo ngôn ngữ trình duyệt
 - Tự lưu symbol, khung thời gian, hình vẽ, indicator vào localStorage
 - Kéo sang trái để tải thêm lịch sử, nút `»` cuộn về nến mới nhất

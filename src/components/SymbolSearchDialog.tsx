@@ -4,6 +4,7 @@ import {
   cryptoInfo,
   loadCryptoCatalog,
   OANDA_SYMBOLS,
+  sourceName,
   type SymbolInfo,
   type SymbolType,
 } from '../data/catalog'
@@ -41,7 +42,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
 /** Hộp thoại "Symbol Search" / "Add symbol" của TradingView */
 export function SymbolSearchDialog({ mode, initialQuery = '', onClose }: Props) {
   const t = useT()
-  const { watchlist, setSymbol, addToWatchlist, removeFromWatchlist } = useChartStore()
+  const { watchlist, setSymbol, addToWatchlist, removeFromWatchlist, oanda } = useChartStore()
   const [query, setQuery] = useState(initialQuery)
   const [tab, setTab] = useState<Tab>('all')
   const [active, setActive] = useState(0)
@@ -174,7 +175,7 @@ export function SymbolSearchDialog({ mode, initialQuery = '', onClose }: Props) 
                 </span>
                 <span className="sym-desc">{isCustom ? t('search.custom', { symbol: s.symbol }) : s.description}</span>
                 <span className="sym-type">{t(`search.${s.type}`)}</span>
-                <span className="sym-exchange">{s.exchange}</span>
+                <span className="sym-exchange">{sourceName(s, !!oanda?.token)}</span>
                 {mode === 'add' && (
                   <span
                     className={`sym-add ${inList ? 'added' : ''}`}

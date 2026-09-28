@@ -10,6 +10,8 @@ export interface SymbolInfo {
   provider: 'binance' | 'oanda'
   /** Mã phía nhà cung cấp, vd. "XAU_USD" của OANDA */
   providerSymbol: string
+  /** Mã tương ứng trên Dukascopy (nguồn forex / kim loại miễn phí), vd. "XAU/USD" */
+  dukascopySymbol?: string
   /** Số chữ số thập phân khi hiển thị giá (theo sàn) */
   precision?: number
   /** Giá tham khảo cho dữ liệu Demo khi không kết nối được nguồn thật */
@@ -43,6 +45,8 @@ export const OANDA_SYMBOLS: SymbolInfo[] = OANDA.map(([id, description, type, pr
   providerSymbol: id,
   precision,
   mockPrice,
+  // Dukascopy đặt tên bạch kim / palladium là "XPT.CMD/USD", "XPD.CMD/USD"
+  dukascopySymbol: id.startsWith('XPT') || id.startsWith('XPD') ? id.replace('_', '.CMD/') : id.replace('_', '/'),
 }))
 
 /** Đồng định giá phổ biến trên Binance — dùng để tách base/quote từ mã (BTCUSDT -> BTC / USDT) */
@@ -71,6 +75,12 @@ const CRYPTO_FALLBACK = [
 /** Danh sách phổ biến dựng sẵn — hiện ngay trong lúc chờ tải danh mục đầy đủ */
 export function cryptoFallback(): SymbolInfo[] {
   return CRYPTO_FALLBACK.map(cryptoInfo)
+}
+
+/** Tên nguồn dữ liệu thực tế của mã (forex / kim loại: OANDA nếu có token, không thì Dukascopy) */
+export function sourceName(info: SymbolInfo, hasOandaToken: boolean): string {
+  if (info.provider === 'binance') return 'Binance'
+  return hasOandaToken ? 'OANDA' : 'Dukascopy'
 }
 
 export function getSymbolInfo(symbol: string): SymbolInfo {

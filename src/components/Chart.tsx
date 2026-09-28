@@ -30,7 +30,7 @@ import {
   translateDrawing,
 } from '../lib/drawings'
 import { snapPositionPoints, tickSize } from '../lib/position'
-import { formatPrice, formatVolume, pricePrecision } from '../lib/intervals'
+import { formatPrice, formatVolume, pricePrecision, setSymbolPrecision } from '../lib/intervals'
 import { computeRsi } from '../lib/rsi'
 import { theme } from '../lib/theme'
 import { logicalToTime, timeToLogical } from '../lib/timeIndex'
@@ -692,7 +692,7 @@ export function Chart() {
     }
 
     const load = async () => {
-      // Thử lần lượt các nguồn (vd. XAUUSD: OANDA -> PAXG proxy -> Demo)
+      // Thử lần lượt các nguồn (vd. XAUUSD: OANDA nếu có token -> Dukascopy -> Demo)
       let feed: DataFeed = mockFeed
       let data: Candle[] = []
       for (const f of feedsFor(symbol, oanda)) {
@@ -708,7 +708,9 @@ export function Chart() {
       feedRef.current = feed
       setFeedName(feed.name)
 
-      const precision = getSymbolInfo(symbol).precision ?? pricePrecision(data.at(-1)?.close ?? 1)
+      const symbolPrecision = getSymbolInfo(symbol).precision ?? null
+      setSymbolPrecision(symbolPrecision)
+      const precision = symbolPrecision ?? pricePrecision(data.at(-1)?.close ?? 1)
       candleRef.current?.applyOptions({
         priceFormat: { type: 'price', precision, minMove: 1 / 10 ** precision },
       })
@@ -846,6 +848,8 @@ export function Chart() {
   // 8. Đảo ngược thang giá (Invert scale)
   useEffect(() => {
     chartRef.current?.priceScale('right').applyOptions({ invertScale })
+    // Đảo cả thang của pane RSI để hai pane cùng chiều
+    rsiRef.current?.priceScale().applyOptions({ invertScale })
   }, [invertScale])
 
   // 9. Indicator RSI trong pane riêng bên dưới
@@ -875,7 +879,11 @@ export function Chart() {
       },
       1,
     )
-    rsi.priceScale().applyOptions({ scaleMargins: { top: 0.1, bottom: 0.1 } })
+    // RSI bật sau khi đã đảo thang: cũng đảo luôn
+    rsi.priceScale().applyOptions({
+      scaleMargins: { top: 0.1, bottom: 0.1 },
+      invertScale: useChartStore.getState().invertScale,
+    })
     rsi.attachPrimitive(new BandPrimitive(30, 70, 'rgba(126, 87, 194, 0.1)'))
     for (const [price, style] of [
       [70, LineStyle.Dashed],

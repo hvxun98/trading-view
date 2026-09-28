@@ -54,6 +54,7 @@ export function DataSourceDialog({ onClose }: Props) {
         </div>
         <div className="modal-body">
           <div className="form-section">{t('data.binance')}</div>
+          <div className="form-section">{t('data.dukascopy')}</div>
           <div className="form-section">{t('data.oanda')}</div>
           <label className="form-row">
             <span>{t('data.env')}</span>

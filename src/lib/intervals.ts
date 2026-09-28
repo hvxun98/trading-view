@@ -21,8 +21,22 @@ export function intervalLabel(interval: Interval): string {
   return INTERVALS.find((i) => i.value === interval)!.label
 }
 
-/** Số chữ số thập phân hợp lý theo độ lớn giá (thay cho tickSize của sàn). */
+/**
+ * Số chữ số thập phân của mã đang mở (vd. EURUSD 5, XAGUSD 3) — như TradingView, mọi nhãn giá
+ * (legend, trục, công cụ vẽ, vị thế…) dùng chung độ chính xác của mã. null = đoán theo độ lớn giá.
+ */
+let symbolPrecision: number | null = null
+
+export function setSymbolPrecision(precision: number | null) {
+  symbolPrecision = precision
+}
+
 export function pricePrecision(price: number): number {
+  return symbolPrecision ?? guessPrecision(price)
+}
+
+/** Số chữ số thập phân hợp lý theo độ lớn giá (dùng khi sàn không cho biết tick size) */
+export function guessPrecision(price: number): number {
   if (price >= 1000) return 2
   if (price >= 10) return 3
   if (price >= 1) return 4

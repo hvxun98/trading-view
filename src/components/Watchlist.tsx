@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { getSymbolInfo } from '../data/catalog'
+import { getSymbolInfo, sourceName } from '../data/catalog'
 import { subscribeWatchlist } from '../data/feeds'
 import { useT } from '../i18n'
-import { formatPrice } from '../lib/intervals'
+import { formatPrice, guessPrecision } from '../lib/intervals'
 import { theme } from '../lib/theme'
 import { useChartStore } from '../store/useChartStore'
 import type { Ticker } from '../types'
@@ -48,14 +48,14 @@ export function Watchlist() {
             key={s}
             data-symbol={s}
             className={`watchlist-row ${s === symbol ? 'active' : ''}`}
-            title={`${info.exchange}:${s} — ${info.description}`}
+            title={`${sourceName(info, !!oanda?.token)}:${s} — ${info.description}`}
             onClick={() => setSymbol(s)}
           >
             <span className="watch-sym">
               <span className={`sym-dot sym-${info.type}`} />
               {s}
             </span>
-            <span>{ticker ? formatPrice(ticker.last, info.precision) : '—'}</span>
+            <span>{ticker ? formatPrice(ticker.last, info.precision ?? guessPrecision(ticker.last)) : '—'}</span>
             <span style={{ color }}>{pct === null ? '—' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`}</span>
             <button
               className="watch-remove"

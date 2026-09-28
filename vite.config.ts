@@ -11,7 +11,24 @@ const oanda = (target: string, prefix: string): ProxyOptions => ({
   rewrite: (path) => path.replace(prefix, ''),
 })
 
+/**
+ * Dukascopy (forex / kim loại miễn phí): endpoint JSONP của widget chart yêu cầu Referer của trang chart
+ * -> proxy gắn header và chuyển /api/dukascopy?... thành freeserv.dukascopy.com/2.0/index.php?...
+ */
+const dukascopy: ProxyOptions = {
+  target: 'https://freeserv.dukascopy.com',
+  changeOrigin: true,
+  rewrite: (path) => path.replace(/^\/api\/dukascopy/, '/2.0/index.php'),
+  headers: {
+    Referer:
+      'https://freeserv.dukascopy.com/2.0/?path=chart/index&showUI=true&showTabs=true&instrument=XAU/USD&period=60&offerSide=BID&timezone=0&live=true&lang=en',
+    'User-Agent':
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+  },
+}
+
 const proxy = {
+  '/api/dukascopy': dukascopy,
   '/api/oanda/practice': oanda('https://api-fxpractice.oanda.com', '/api/oanda/practice'),
   '/api/oanda/live': oanda('https://api-fxtrade.oanda.com', '/api/oanda/live'),
 }
