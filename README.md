@@ -22,6 +22,7 @@ npm run lint     # oxlint
 - Kéo sang trái để tải thêm lịch sử, nút `»` cuộn về nến mới nhất
 - Reset chart view: nút trên toolbar, chuột phải trên chart, hoặc `Alt + R`
 - Bar Replay: click chọn nến (hoặc nhập ngày, tự tải lịch sử cũ), Play/Pause, Step, tốc độ 0.5x–10x
+- Tự chuyển sang dữ liệu Demo nếu không kết nối được Binance
 
 ## Phím tắt
 
@@ -31,4 +32,3 @@ npm run lint     # oxlint
 | `Shift + ↓` | Replay: Play / Pause |
 | `Shift + →` | Replay: tiến 1 nến |
 | `Esc` | Huỷ chọn điểm replay |
-- Tự chuyển sang dữ liệu Demo nếu không kết nối được Binance
