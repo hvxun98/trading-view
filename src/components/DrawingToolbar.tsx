@@ -129,6 +129,11 @@ const TOOL_LIST: { tool: Tool; title: string; icon: ReactNode }[] = [
     icon: icon(<path d="M5 7h18v10H13l-5 4v-4H5z" />),
   },
   {
+    tool: 'comment',
+    title: 'Comment',
+    icon: icon(<path d="M9 5h11a4 4 0 0 1 4 4v4a4 4 0 0 1-4 4h-7l-6 5 1-5.5A4 4 0 0 1 5 13V9a4 4 0 0 1 4-4Z" />),
+  },
+  {
     tool: 'measure',
     title: 'Measure (Shift + Click)',
     icon: icon(
@@ -151,7 +156,7 @@ const GROUPS: { id: string; label: string; tools: Tool[] }[] = [
   { id: 'lines', label: 'Lines', tools: ['trendline', 'ray', 'hline', 'vline'] },
   { id: 'fib', label: 'Fibonacci', tools: ['fib'] },
   { id: 'shapes', label: 'Shapes', tools: ['rect'] },
-  { id: 'text', label: 'Text & Notes', tools: ['text', 'note', 'callout'] },
+  { id: 'text', label: 'Text & Notes', tools: ['text', 'note', 'callout', 'comment'] },
   { id: 'forecast', label: 'Forecasting', tools: ['long', 'short'] },
   { id: 'measure', label: 'Measure', tools: ['measure'] },
 ]

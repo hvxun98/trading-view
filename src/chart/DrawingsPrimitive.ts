@@ -9,7 +9,7 @@ import type {
   SeriesType,
   Time,
 } from 'lightweight-charts'
-import { lineDash, POSITION_TYPES, RECT_HANDLES, styleOf } from '../lib/drawings'
+import { COMMENT_TAIL, lineDash, POSITION_TYPES, RECT_HANDLES, styleOf } from '../lib/drawings'
 import { formatPrice, pricePrecision } from '../lib/intervals'
 import { theme } from '../lib/theme'
 import type { AnchorPoint, Drawing } from '../types'
@@ -304,7 +304,8 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
         return [{ x: this.width / 2, y: pts[0].y }]
       case 'text':
       case 'note':
-        // Text/Note: kéo thân để di chuyển, không có điểm neo riêng
+      case 'comment':
+        // Text/Note/Comment: kéo thân để di chuyển, không có điểm neo riêng
         return []
       case 'long':
       case 'short': {
@@ -364,6 +365,10 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
         case 'short':
         case 'text':
           hit = inBox(p, box, 2)
+          break
+        case 'comment':
+          // Bong bóng hoặc phần đuôi (từ điểm neo lên tới đáy bong bóng)
+          hit = inBox(p, box) || (Math.abs(p.x - a.x - 6) <= 8 && p.y <= a.y + 2 && p.y >= a.y - COMMENT_TAIL - 2)
           break
         case 'note':
           hit = Math.hypot(p.x - a.x, p.y - (a.y - NOTE_PIN_RADIUS)) <= NOTE_PIN_RADIUS + 3 || inBox(p, box)
@@ -442,6 +447,7 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
       case 'text':
       case 'note':
       case 'callout':
+      case 'comment':
         this.drawText(ctx, shape, style.color, style.fontSize, active)
         break
     }
@@ -569,6 +575,42 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
         }
       } else {
         shape.box = undefined
+      }
+      return
+    }
+
+    if (drawing.type === 'comment') {
+      // Bong bóng hội thoại: đuôi chỉ vào điểm neo, bong bóng bo tròn nằm phía trên-phải
+      const box = {
+        x: a.x,
+        y: a.y - COMMENT_TAIL - textH - TEXT_PAD * 2,
+        w: textW + TEXT_PAD * 3,
+        h: textH + TEXT_PAD * 2,
+      }
+      shape.box = box
+      const r = Math.min(12, box.h / 2)
+      const bottom = box.y + box.h
+      ctx.setLineDash([])
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.moveTo(box.x + r, box.y)
+      ctx.arcTo(box.x + box.w, box.y, box.x + box.w, bottom, r)
+      ctx.arcTo(box.x + box.w, bottom, box.x, bottom, r)
+      ctx.lineTo(box.x + 14, bottom)
+      ctx.lineTo(a.x, a.y)
+      ctx.lineTo(box.x + 2, bottom - 2)
+      ctx.arcTo(box.x, bottom, box.x, box.y, Math.min(r, 2))
+      ctx.arcTo(box.x, box.y, box.x + box.w, box.y, r)
+      ctx.closePath()
+      ctx.fill()
+      if (active && !shape.preview) {
+        ctx.strokeStyle = '#fff'
+        ctx.lineWidth = 1
+        ctx.stroke()
+      }
+      if (!editing) {
+        ctx.fillStyle = '#fff'
+        lines.forEach((l, i) => ctx.fillText(l, box.x + TEXT_PAD * 1.5, box.y + TEXT_PAD + i * lh))
       }
       return
     }

@@ -14,9 +14,12 @@ export const DRAWING_LABELS: Record<DrawingTool, string> = {
   text: 'Text',
   note: 'Note',
   callout: 'Callout',
+  comment: 'Comment',
 }
 
-export const TEXT_TYPES: DrawingTool[] = ['text', 'note', 'callout']
+export const TEXT_TYPES: DrawingTool[] = ['text', 'note', 'callout', 'comment']
+/** Chiều cao đuôi bong bóng Comment (px) */
+export const COMMENT_TAIL = 12
 export const POSITION_TYPES: DrawingTool[] = ['long', 'short']
 export const FONT_SIZES = [10, 11, 12, 14, 16, 20, 24, 28, 32, 40]
 
@@ -35,6 +38,8 @@ const DEFAULT_STYLES: Record<DrawingTool, DrawingStyle> = {
   text: { ...base, color: '#2962ff' },
   note: { ...base, color: '#2962ff' },
   callout: { ...base, color: '#2962ff' },
+  // Comment: màu nền bong bóng
+  comment: { ...base, color: '#2962ff' },
 }
 
 export function styleOf(d: Drawing): DrawingStyle {

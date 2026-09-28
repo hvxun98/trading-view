@@ -18,7 +18,7 @@ import { BandPrimitive } from '../chart/BandPrimitive'
 import { DrawingsPrimitive } from '../chart/DrawingsPrimitive'
 import { binanceFeed } from '../data/binance'
 import { mockFeed } from '../data/mock'
-import { formatDuration, moveAnchor, styleOf, TEXT_TYPES, translateDrawing } from '../lib/drawings'
+import { COMMENT_TAIL, formatDuration, moveAnchor, styleOf, TEXT_TYPES, translateDrawing } from '../lib/drawings'
 import { formatPrice, formatVolume, pricePrecision } from '../lib/intervals'
 import { computeRsi } from '../lib/rsi'
 import { theme } from '../lib/theme'
@@ -193,8 +193,22 @@ export function Chart() {
 
   /** Mở ô nhập để tạo text/note/callout mới tại toạ độ pane (x, y) */
   const openCreateEditor = (type: DrawingTool, points: AnchorPoint[], x: number, y: number) => {
-    const pos = paneToWrap(type === 'note' ? x - 12 : x, type === 'note' ? y - 24 : y)
-    setEditor({ mode: 'create', type, points, text: '', x: pos.x, y: pos.y, above: type === 'note' })
+    // Note: hộp nằm trên ghim; Comment: bong bóng nằm trên đuôi
+    const pos =
+      type === 'note'
+        ? paneToWrap(x - 12, y - 24)
+        : type === 'comment'
+          ? paneToWrap(x, y - COMMENT_TAIL)
+          : paneToWrap(x, y)
+    setEditor({
+      mode: 'create',
+      type,
+      points,
+      text: '',
+      x: pos.x,
+      y: pos.y,
+      above: type === 'note' || type === 'comment',
+    })
   }
 
   /** Sửa chữ của hình có sẵn (double-click hoặc nút bút chì) */
@@ -207,7 +221,8 @@ export function Chart() {
     const fallbackX = candleRef.current ? chartRef.current?.timeScale().timeToCoordinate(anchor.time as Time) : null
     const fallbackY = candleRef.current?.priceToCoordinate(anchor.price)
     const px = box ? box.x : (fallbackX ?? 0)
-    const py = box ? (d.type === 'note' ? box.y + box.h : box.y) : (fallbackY ?? 0)
+    const above = d.type === 'note' || d.type === 'comment'
+    const py = box ? (above ? box.y + box.h : box.y) : (fallbackY ?? 0)
     const pos = paneToWrap(px, py)
     store.selectDrawing(id)
     drawingsRef.current?.setEditing(id)
@@ -219,7 +234,7 @@ export function Chart() {
       text: d.text ?? '',
       x: pos.x,
       y: pos.y,
-      above: d.type === 'note',
+      above,
     })
   }
 
@@ -475,7 +490,7 @@ export function Chart() {
         store.setTool('cursor')
       }
 
-      if (tool === 'text' || tool === 'note') {
+      if (tool === 'text' || tool === 'note' || tool === 'comment') {
         store.setTool('cursor')
         openCreateEditor(tool, [point], x, y)
       } else if (tool === 'long' || tool === 'short') {
@@ -960,7 +975,11 @@ export function Chart() {
           fontSize={editorStyle!.fontSize}
           color={editor.type === 'text' ? editorStyle!.color : editor.type === 'note' ? theme.text : '#fff'}
           background={
-            editor.type === 'callout' ? editorStyle!.color : editor.type === 'note' ? theme.panel : 'transparent'
+            editor.type === 'callout' || editor.type === 'comment'
+              ? editorStyle!.color
+              : editor.type === 'note'
+                ? theme.panel
+                : 'transparent'
           }
           onCommit={(text) => closeEditor(text)}
           onCancel={() => closeEditor(null)}

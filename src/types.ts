@@ -41,6 +41,7 @@ export type DrawingTool =
   | 'text'
   | 'note'
   | 'callout'
+  | 'comment'
 /** 'measure' là thước đo tạm thời, không lưu thành hình vẽ */
 export type Tool = 'cursor' | 'measure' | DrawingTool
 
