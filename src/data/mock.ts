@@ -1,6 +1,7 @@
 import type { UTCTimestamp } from 'lightweight-charts'
 import type { Candle, DataFeed } from '../types'
 import { intervalSeconds } from '../lib/intervals'
+import { getSymbolInfo } from './catalog'
 
 // PRNG có seed để cùng symbol/thời điểm luôn sinh ra cùng một nến
 function mulberry32(seed: number) {
@@ -20,7 +21,7 @@ function hash(s: string): number {
 }
 
 function basePrice(symbol: string): number {
-  return 10 + (Math.abs(hash(symbol)) % 50000)
+  return getSymbolInfo(symbol).mockPrice ?? 10 + (Math.abs(hash(symbol)) % 50000)
 }
 
 /** Dữ liệu giả lập, dùng khi không truy cập được Binance (offline, bị chặn...). */

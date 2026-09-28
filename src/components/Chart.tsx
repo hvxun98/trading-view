@@ -17,6 +17,8 @@ import {
 import { BandPrimitive } from '../chart/BandPrimitive'
 import { DrawingsPrimitive } from '../chart/DrawingsPrimitive'
 import { binanceFeed } from '../data/binance'
+import { getSymbolInfo } from '../data/catalog'
+import { feedsFor } from '../data/feeds'
 import { mockFeed } from '../data/mock'
 import {
   COMMENT_TAIL,
@@ -129,7 +131,10 @@ export function Chart() {
     lockAll,
     hideAll,
     language,
+    oanda,
   } = useChartStore()
+  // Đổi token / môi trường OANDA thì tải lại dữ liệu
+  const oandaKey = oanda ? `${oanda.env}:${oanda.token}` : ''
   const t = useT()
   const drawings = useChartStore((s) => s.drawings[s.symbol]) ?? NO_DRAWINGS
   const {
@@ -687,19 +692,23 @@ export function Chart() {
     }
 
     const load = async () => {
-      let feed: DataFeed = binanceFeed
-      let data: Candle[]
-      try {
-        data = await feed.getHistory(symbol, interval)
-      } catch {
-        feed = mockFeed
-        data = await feed.getHistory(symbol, interval)
+      // Thử lần lượt các nguồn (vd. XAUUSD: OANDA -> PAXG proxy -> Demo)
+      let feed: DataFeed = mockFeed
+      let data: Candle[] = []
+      for (const f of feedsFor(symbol, oanda)) {
+        try {
+          data = await f.getHistory(symbol, interval)
+          feed = f
+          if (data.length) break
+        } catch {
+          // nguồn này lỗi -> thử nguồn tiếp theo
+        }
       }
       if (cancelled) return
       feedRef.current = feed
       setFeedName(feed.name)
 
-      const precision = pricePrecision(data.at(-1)?.close ?? 1)
+      const precision = getSymbolInfo(symbol).precision ?? pricePrecision(data.at(-1)?.close ?? 1)
       candleRef.current?.applyOptions({
         priceFormat: { type: 'price', precision, minMove: 1 / 10 ** precision },
       })
@@ -737,7 +746,7 @@ export function Chart() {
       unsubscribe()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, interval])
+  }, [symbol, interval, oandaKey])
 
   // 3. Cuộn sang trái gần hết dữ liệu -> tải thêm lịch sử; theo dõi đã cuộn khỏi realtime chưa
   useEffect(() => {

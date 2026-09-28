@@ -82,27 +82,6 @@ select {
   cursor: default;
 }
 
-.symbol-search {
-  position: relative;
-}
-
-.symbol-search input {
-  width: 130px;
-  height: 28px;
-  padding: 0 8px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  font-weight: 600;
-  text-transform: uppercase;
-  outline: none;
-}
-
-.symbol-search input:hover,
-.symbol-search input:focus {
-  background: var(--hover);
-}
-
 .symbol-dropdown {
   position: fixed;
   z-index: 10;
@@ -1014,4 +993,271 @@ select {
   .drawing-toolbar {
     width: 44px;
   }
+}
+
+/* ---------- Symbol Search (như TradingView) ---------- */
+.symbol-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 120px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.symbol-btn svg {
+  color: var(--text-dim);
+}
+
+.search-dialog {
+  width: min(760px, calc(100vw - 32px));
+  height: min(640px, calc(100vh - 64px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.search-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.search-input input {
+  flex: 1;
+  height: 32px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.search-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.search-tab {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.search-tab:hover {
+  background: var(--hover);
+}
+
+.search-tab.active {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+.search-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.search-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.search-row {
+  display: grid;
+  grid-template-columns: 28px minmax(90px, 140px) 1fr auto auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(42, 46, 57, 0.5);
+  cursor: pointer;
+}
+
+.search-row.active {
+  background: var(--hover);
+}
+
+.sym-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.sym-crypto {
+  background: #f7931a;
+}
+
+.sym-forex {
+  background: #2962ff;
+}
+
+.sym-commodity {
+  background: #d4a017;
+}
+
+.sym-name {
+  font-weight: 600;
+}
+
+.sym-name mark {
+  background: none;
+  color: var(--accent);
+}
+
+.sym-desc {
+  overflow: hidden;
+  color: var(--text-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sym-type,
+.sym-exchange {
+  color: var(--text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.sym-exchange {
+  min-width: 60px;
+  text-align: right;
+  color: var(--text);
+}
+
+.sym-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  font-size: 16px;
+  color: var(--text-dim);
+}
+
+.search-row:hover .sym-add {
+  background: var(--border);
+  color: var(--text);
+}
+
+.sym-add.added {
+  color: var(--accent);
+}
+
+@media (max-width: 600px) {
+  .search-row {
+    grid-template-columns: 28px 1fr auto;
+  }
+
+  .sym-desc,
+  .sym-type {
+    display: none;
+  }
+}
+
+/* ---------- Watchlist: thêm / xoá mã ---------- */
+.watchlist-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 4px 12px;
+  font-weight: 600;
+}
+
+.watch-add {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+}
+
+.watchlist-row {
+  position: relative;
+}
+
+.watch-sym {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sym-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.watch-remove {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--text-dim);
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.watchlist-row:hover .watch-remove {
+  opacity: 1;
+}
+
+.watch-remove:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* ---------- Nguồn dữ liệu ---------- */
+.form-row > select {
+  width: 170px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.form-ok {
+  margin-top: 8px;
+  color: #089981;
+  font-size: 12px;
+}
+
+.form-help {
+  margin: 12px 0 0;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.search-input input::placeholder {
+  text-transform: none;
+  color: var(--text-dim);
 }

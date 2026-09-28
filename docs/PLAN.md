@@ -66,6 +66,7 @@ nên có thể thêm nguồn mới (sàn khác, chứng khoán VN, server riêng
 - **Style hình vẽ** (màu/độ dày/kiểu nét), **khoá/ẩn** từng hình & tất cả, **Undo/Redo**, rectangle 8 điểm neo
 - **Measure**, **Long/Short Position**, **Text / Note / Callout / Comment**; thanh công cụ trái chia nhóm có menu con
 - Settings vị thế (vốn, lot, rủi ro, đòn bẩy) + P&L theo giá thực tế
+- Tìm mã / thêm mã vào Watchlist như TradingView; nguồn OANDA (XAUUSD, forex) + Binance
 - **Song ngữ EN / VI** (i18n có kiểm tra kiểu: thiếu bản dịch là lỗi biên dịch)
 - **RSI (14)** trong pane riêng (RMA như `ta.rsi` của TradingView), cập nhật cả khi realtime & replay
 - **Invert scale** (`Alt + I`)

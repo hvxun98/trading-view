@@ -1,44 +1,76 @@
 import { useEffect, useState } from 'react'
-import { fetchTickers, subscribeTickers } from '../data/binance'
-import { formatPrice } from '../lib/intervals'
-import { WATCHLIST } from '../lib/symbols'
-import { theme } from '../lib/theme'
+import { getSymbolInfo } from '../data/catalog'
+import { subscribeWatchlist } from '../data/feeds'
 import { useT } from '../i18n'
+import { formatPrice } from '../lib/intervals'
+import { theme } from '../lib/theme'
 import { useChartStore } from '../store/useChartStore'
 import type { Ticker } from '../types'
+import { SymbolSearchDialog } from './SymbolSearchDialog'
 
 export function Watchlist() {
-  const { symbol, setSymbol } = useChartStore()
+  const { symbol, setSymbol, watchlist, removeFromWatchlist, oanda } = useChartStore()
   const t = useT()
   const [tickers, setTickers] = useState<Record<string, Ticker>>({})
+  const [adding, setAdding] = useState(false)
 
+  // Đăng ký lại khi danh sách / cấu hình OANDA đổi (key dạng chuỗi để tránh đăng ký thừa)
+  const listKey = watchlist.join(',')
+  const oandaKey = oanda ? `${oanda.env}:${oanda.token}` : ''
   useEffect(() => {
-    const merge = (t: Ticker) => setTickers((prev) => ({ ...prev, [t.symbol]: t }))
-    fetchTickers(WATCHLIST)
-      .then((list) => list.forEach(merge))
-      .catch(() => {})
-    return subscribeTickers(WATCHLIST, merge)
-  }, [])
+    const merge = (tk: Ticker) => setTickers((prev) => ({ ...prev, [tk.symbol]: tk }))
+    return subscribeWatchlist(listKey ? listKey.split(',') : [], oanda, merge)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listKey, oandaKey])
 
   return (
     <div className="watchlist">
+      <div className="watchlist-toolbar">
+        <span>{t('panel.watchlist')}</span>
+        <button className="tb-btn watch-add" title={t('watch.add')} onClick={() => setAdding(true)}>
+          <svg width="18" height="18" viewBox="0 0 18 18" stroke="currentColor" strokeWidth="1.4">
+            <path d="M9 3v12M3 9h12" />
+          </svg>
+        </button>
+      </div>
       <div className="watchlist-row watchlist-cols">
         <span>{t('watch.symbol')}</span>
         <span>{t('watch.last')}</span>
         <span>{t('watch.change')}</span>
       </div>
-      {WATCHLIST.map((s) => {
+      {watchlist.map((s) => {
+        const info = getSymbolInfo(s)
         const ticker = tickers[s]
         const pct = ticker ? ((ticker.last - ticker.open) / ticker.open) * 100 : null
         const color = pct === null ? theme.textDim : pct >= 0 ? theme.up : theme.down
         return (
-          <div key={s} className={`watchlist-row ${s === symbol ? 'active' : ''}`} onClick={() => setSymbol(s)}>
-            <span>{s}</span>
-            <span>{ticker ? formatPrice(ticker.last) : '—'}</span>
+          <div
+            key={s}
+            data-symbol={s}
+            className={`watchlist-row ${s === symbol ? 'active' : ''}`}
+            title={`${info.exchange}:${s} — ${info.description}`}
+            onClick={() => setSymbol(s)}
+          >
+            <span className="watch-sym">
+              <span className={`sym-dot sym-${info.type}`} />
+              {s}
+            </span>
+            <span>{ticker ? formatPrice(ticker.last, info.precision) : '—'}</span>
             <span style={{ color }}>{pct === null ? '—' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`}</span>
+            <button
+              className="watch-remove"
+              title={t('watch.remove')}
+              onClick={(e) => {
+                e.stopPropagation()
+                removeFromWatchlist(s)
+              }}
+            >
+              ×
+            </button>
           </div>
         )
       })}
+      {adding && <SymbolSearchDialog mode="add" onClose={() => setAdding(false)} />}
     </div>
   )
 }

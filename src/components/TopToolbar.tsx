@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { INTERVALS } from '../lib/intervals'
 import { useChartStore } from '../store/useChartStore'
-import { WATCHLIST } from '../lib/symbols'
 import type { Lang } from '../types'
-import { GlobeIcon, RedoIcon, UndoIcon } from './icons'
+import { DataSourceDialog } from './DataSourceDialog'
+import { GlobeIcon, RedoIcon, SettingsIcon, UndoIcon } from './icons'
+import { SymbolSearchDialog } from './SymbolSearchDialog'
 
 const LANGS: Lang[] = ['en', 'vi']
 
@@ -15,7 +16,6 @@ export function TopToolbar() {
     replayMode,
     invertScale,
     rsiEnabled,
-    setSymbol,
     setInterval,
     startReplaySelect,
     exitReplay,
@@ -31,44 +31,36 @@ export function TopToolbar() {
   const [langOpen, setLangOpen] = useState(false)
   const canUndo = useChartStore((s) => s.undoStack.length > 0)
   const canRedo = useChartStore((s) => s.redoStack.length > 0)
-  const [query, setQuery] = useState('')
-  const [open, setOpen] = useState(false)
   const [indicatorsOpen, setIndicatorsOpen] = useState(false)
+  /** Hộp thoại tìm mã: null = đóng, chuỗi = mở với nội dung tìm kiếm ban đầu */
+  const [search, setSearch] = useState<string | null>(null)
+  const [dataOpen, setDataOpen] = useState(false)
 
-  const q = query.trim().toUpperCase()
-  const suggestions = WATCHLIST.filter((s) => s.includes(q))
-
-  const choose = (s: string) => {
-    setSymbol(s)
-    setQuery('')
-    setOpen(false)
-  }
+  // Như TradingView: gõ chữ / số khi đang xem chart là mở ngay hộp thoại tìm mã
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1 || !/[a-z0-9]/i.test(e.key)) return
+      const target = e.target as HTMLElement
+      if (target.closest('input, textarea, select, [role="dialog"]')) return
+      e.preventDefault()
+      setSearch(e.key.toUpperCase())
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <header className="toolbar">
-      <div className="symbol-search">
-        <input
-          value={open ? query : symbol}
-          placeholder={symbol}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && q) choose(q)
-            if (e.key === 'Escape') (e.target as HTMLInputElement).blur()
-          }}
-        />
-        {open && (
-          <ul className="symbol-dropdown">
-            {suggestions.map((s) => (
-              <li key={s} onMouseDown={() => choose(s)}>
-                {s}
-              </li>
-            ))}
-            {q && !suggestions.includes(q) && <li onMouseDown={() => choose(q)}>{q} ↵</li>}
-          </ul>
-        )}
-      </div>
+      <button className="tb-btn symbol-btn" title={t('toolbar.symbolSearch')} onClick={() => setSearch('')}>
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="7.5" cy="7.5" r="5.5" />
+          <path d="m12 12 4 4" />
+        </svg>
+        {symbol}
+      </button>
+      {search !== null && (
+        <SymbolSearchDialog mode="change" initialQuery={search} onClose={() => setSearch(null)} />
+      )}
 
       <div className="divider" />
 
@@ -134,6 +126,11 @@ export function TopToolbar() {
       </button>
 
       <div className="toolbar-spacer" />
+
+      <button className="tb-btn tb-icon" title={t('toolbar.dataSources')} onClick={() => setDataOpen(true)}>
+        <SettingsIcon />
+      </button>
+      {dataOpen && <DataSourceDialog onClose={() => setDataOpen(false)} />}
 
       <div className="menu-anchor">
         <button

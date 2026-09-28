@@ -15,10 +15,23 @@ npm run build    # type-check + build production
 npm run lint     # oxlint
 ```
 
+## Dữ liệu OANDA (XAUUSD, forex)
+
+1. Tạo tài khoản demo miễn phí (fxTrade Practice) tại oanda.com, vào *Manage API Access* để tạo **API token**.
+2. Trong app: nút ⚙ **Nguồn dữ liệu** (góc phải toolbar) → chọn *Demo (practice)* → dán token → *Kiểm tra kết nối* → *Lưu*.
+3. OANDA không cho gọi API trực tiếp từ trình duyệt (CORS), nên request đi qua proxy của Vite
+   (`/api/oanda/practice` → `api-fxpractice.oanda.com`, `/api/oanda/live` → `api-fxtrade.oanda.com`, cấu hình trong `vite.config.ts`).
+   Proxy có sẵn khi chạy `npm run dev` hoặc `npm run preview`; nếu deploy lên hosting tĩnh cần một reverse proxy tương tự.
+
+Token chỉ được lưu trong localStorage của trình duyệt.
+
 ## Tính năng hiện có
 
 - Nến + volume, crosshair, legend OHLC, dark theme giống TradingView
-- Khung thời gian 1m, 5m, 15m, 1H, 4H, 1D, 3D, 1W, 1M; tìm/đổi symbol, watchlist realtime
+- Khung thời gian 1m, 5m, 15m, 1H, 4H, 1D, 3D, 1W, 1M
+- Tìm mã như TradingView (bấm tên mã hoặc gõ chữ bất kỳ trên chart): tab Tất cả / Crypto / Forex / Hàng hoá, toàn bộ cặp Binance + forex & kim loại OANDA
+- Watchlist: nút **+** thêm mã, **×** xoá mã, giá realtime (Binance WebSocket, OANDA hỏi định kỳ), lưu trong trình duyệt
+- **XAUUSD, XAGUSD, EURUSD…** từ OANDA v20 (cần token); chưa có token thì XAUUSD dùng PAXG/USDT của Binance làm nguồn thay thế
 - Đổi khung / symbol như TradingView: giữ nguyên độ zoom và vị trí đang xem, không trượt, không nháy trống
 - Thanh công cụ vẽ bên trái chia nhóm có menu con (như TradingView): trend line, ray, đường ngang/dọc, hình chữ nhật, Fibonacci
 - Thước đo (Measure / `Shift + click`): chênh lệch giá, %, tick, số nến, thời gian, volume
