@@ -20,8 +20,10 @@ npm run lint     # oxlint
 - Nến + volume, crosshair, legend OHLC, dark theme giống TradingView
 - Khung thời gian 1m, 5m, 15m, 1H, 4H, 1D, 3D, 1W, 1M; tìm/đổi symbol, watchlist realtime
 - Thanh công cụ vẽ bên trái: trend line, ray, đường ngang/dọc, hình chữ nhật, Fibonacci
-- Kéo thả hình vẽ: kéo thân để di chuyển, kéo điểm neo để sửa; thanh công cụ nổi (Clone / Xoá), menu chuột phải trên hình
-- Object Tree (panel phải): danh sách hình vẽ, click để chọn, xoá từng hình hoặc xoá tất cả
+- Kéo thả hình vẽ: kéo thân để di chuyển, kéo điểm neo để sửa (hình chữ nhật có 8 điểm neo)
+- Thanh công cụ nổi: màu (bảng màu TradingView), độ dày 1–4px, kiểu nét liền/gạch/chấm, khoá, clone, xoá; menu chuột phải trên hình
+- Khoá / ẩn từng hình hoặc tất cả hình vẽ; Undo / Redo
+- Object Tree (panel phải): danh sách hình vẽ, click để chọn, ẩn / khoá / xoá từng hình hoặc xoá tất cả
 - Indicator RSI (14) trong pane riêng, vùng 30–70 như TradingView
 - Đảo ngược thang giá (Invert scale)
 - Tự lưu symbol, khung thời gian, hình vẽ, indicator vào localStorage
@@ -38,6 +40,7 @@ npm run lint     # oxlint
 | `Alt + I` | Đảo ngược thang giá |
 | `Alt + T` / `Alt + H` / `Alt + V` / `Alt + F` | Trend line / đường ngang / đường dọc / Fibonacci |
 | `Delete` | Xoá hình vẽ đang chọn |
+| `Ctrl + Z` / `Ctrl + Y` (`Ctrl + Shift + Z`) | Undo / Redo hình vẽ |
 | `Shift + ↓` | Replay: Play / Pause |
 | `Shift + →` | Replay: tiến 1 nến |
 | `Esc` | Huỷ: chọn điểm replay → công cụ vẽ → hình đang chọn |

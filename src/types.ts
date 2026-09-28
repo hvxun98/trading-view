@@ -38,9 +38,21 @@ export interface AnchorPoint {
   price: number
 }
 
+export type LineStyleName = 'solid' | 'dashed' | 'dotted'
+
+export interface DrawingStyle {
+  color: string
+  lineWidth: number
+  lineStyle: LineStyleName
+}
+
 export interface Drawing {
   id: string
   type: DrawingTool
   /** 1 điểm cho hline/vline, 2 điểm cho các loại còn lại */
   points: AnchorPoint[]
+  /** Chỉ lưu phần khác mặc định; hình cũ không có style vẫn hiển thị đúng */
+  style?: Partial<DrawingStyle>
+  locked?: boolean
+  hidden?: boolean
 }

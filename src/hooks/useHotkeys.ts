@@ -17,7 +17,14 @@ export function useHotkeys() {
       if (target.closest('input, select, textarea')) return
       const store = useChartStore.getState()
 
-      if (e.altKey && e.code === 'KeyR') {
+      const mod = e.ctrlKey || e.metaKey
+      if (mod && e.code === 'KeyZ' && !e.shiftKey) {
+        e.preventDefault()
+        store.undo()
+      } else if (mod && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) {
+        e.preventDefault()
+        store.redo()
+      } else if (e.altKey && e.code === 'KeyR') {
         e.preventDefault()
         store.resetView()
       } else if (e.altKey && e.code === 'KeyI') {

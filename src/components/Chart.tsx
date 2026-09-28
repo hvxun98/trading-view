@@ -18,13 +18,14 @@ import { BandPrimitive } from '../chart/BandPrimitive'
 import { DrawingsPrimitive } from '../chart/DrawingsPrimitive'
 import { binanceFeed } from '../data/binance'
 import { mockFeed } from '../data/mock'
-import { DRAWING_LABELS, moveAnchor, translateDrawing } from '../lib/drawings'
+import { moveAnchor, translateDrawing } from '../lib/drawings'
 import { pricePrecision } from '../lib/intervals'
 import { computeRsi } from '../lib/rsi'
 import { theme } from '../lib/theme'
 import { logicalToTime, timeToLogical } from '../lib/timeIndex'
 import { useChartStore } from '../store/useChartStore'
 import type { AnchorPoint, Candle, DataFeed, Drawing, DrawingTool } from '../types'
+import { DrawingFloatToolbar } from './DrawingFloatToolbar'
 import { Legend } from './Legend'
 
 const BAR_SPACING = 8
@@ -90,6 +91,8 @@ export function Chart() {
     rsiEnabled,
     activeTool,
     selectedDrawingId,
+    lockAll,
+    hideAll,
   } = useChartStore()
   const drawings = useChartStore((s) => s.drawings[s.symbol]) ?? NO_DRAWINGS
   const {
@@ -103,6 +106,8 @@ export function Chart() {
     clearDrawings,
     addDrawing,
     removeDrawing,
+    toggleDrawingLock,
+    toggleDrawingHidden,
   } = useChartStore.getState()
   const replayModeRef = useRef(replayMode)
   replayModeRef.current = replayMode
@@ -396,7 +401,9 @@ export function Chart() {
       const drawing = hit && (store.drawings[store.symbol] ?? []).find((d) => d.id === hit.id)
       const startLogical = chart.timeScale().coordinateToLogical(p.x)
       const startPrice = candles.coordinateToPrice(p.y)
+      // Hình bị khoá: không kéo được (click vẫn chọn được), để chart cuộn như bình thường
       if (!hit || !drawing || startLogical === null || startPrice === null) return
+      if (drawingsPrimitive.isLocked(hit.id)) return
 
       e.stopPropagation()
       e.preventDefault()
@@ -627,8 +634,8 @@ export function Chart() {
 
   // 10. Hình vẽ: đồng bộ từ store vào lớp vẽ; đổi công cụ thì huỷ hình đang vẽ dở
   useEffect(() => {
-    drawingsRef.current?.setState(drawings, selectedDrawingId)
-  }, [drawings, selectedDrawingId])
+    drawingsRef.current?.setState(drawings, selectedDrawingId, { lockAll, hideAll })
+  }, [drawings, selectedDrawingId, lockAll, hideAll])
 
   useEffect(() => {
     pendingRef.current = null
@@ -648,7 +655,13 @@ export function Chart() {
       const shifted = y === null ? null : candles.coordinateToPrice(y + 20)
       dPrice = shifted === null ? 0 : shifted - d.points[0].price
     }
-    addDrawing({ ...d, id: crypto.randomUUID(), points: translateDrawing(d, 5, dPrice, dataRef.current) })
+    addDrawing({
+      ...d,
+      id: crypto.randomUUID(),
+      locked: false,
+      hidden: false,
+      points: translateDrawing(d, 5, dPrice, dataRef.current),
+    })
   }
 
   /** Hình vẽ tại vị trí chuột (toạ độ client), dùng cho menu chuột phải */
@@ -701,15 +714,7 @@ export function Chart() {
       )}
 
       {selectedDrawing && replayMode !== 'selecting' && (
-        <div className="float-toolbar" onMouseDown={(e) => e.stopPropagation()}>
-          <span className="float-toolbar-name">{DRAWING_LABELS[selectedDrawing.type]}</span>
-          <button className="tb-btn" title="Clone" onClick={() => cloneDrawing(selectedDrawing.id)}>
-            ⧉
-          </button>
-          <button className="tb-btn" title="Remove (Delete)" onClick={() => removeDrawing(selectedDrawing.id)}>
-            🗑
-          </button>
-        </div>
+        <DrawingFloatToolbar drawing={selectedDrawing} onClone={() => cloneDrawing(selectedDrawing.id)} />
       )}
 
       {scrolledBack && (
@@ -735,6 +740,24 @@ export function Chart() {
                   }}
                 >
                   <span>⧉ Clone</span>
+                </li>
+                <li
+                  onClick={() => {
+                    toggleDrawingLock(menu.drawingId!)
+                    setMenu(null)
+                  }}
+                >
+                  <span>
+                    {drawings.find((d) => d.id === menu.drawingId)?.locked ? '🔓 Unlock' : '🔒 Lock'}
+                  </span>
+                </li>
+                <li
+                  onClick={() => {
+                    toggleDrawingHidden(menu.drawingId!)
+                    setMenu(null)
+                  }}
+                >
+                  <span>🙈 Hide</span>
                 </li>
                 <li
                   onClick={() => {

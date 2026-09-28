@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useChartStore } from '../store/useChartStore'
 import type { Tool } from '../types'
+import { EyeIcon, EyeOffIcon, LockIcon, UnlockIcon } from './icons'
 
 const icon = (children: ReactNode) => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.2">
@@ -86,7 +87,17 @@ const TOOLS: { tool: Tool; title: string; icon: ReactNode }[] = [
 ]
 
 export function DrawingToolbar() {
-  const { activeTool, setTool, clearDrawings, removeSelectedDrawing, selectedDrawingId } = useChartStore()
+  const {
+    activeTool,
+    setTool,
+    clearDrawings,
+    removeSelectedDrawing,
+    selectedDrawingId,
+    lockAll,
+    hideAll,
+    toggleLockAll,
+    toggleHideAll,
+  } = useChartStore()
 
   return (
     <nav className="drawing-toolbar">
@@ -102,6 +113,21 @@ export function DrawingToolbar() {
       ))}
 
       <div className="dt-divider" />
+
+      <button
+        className={`dt-btn ${lockAll ? 'active' : ''}`}
+        title={lockAll ? 'Mở khoá tất cả hình vẽ' : 'Khoá tất cả hình vẽ'}
+        onClick={toggleLockAll}
+      >
+        {lockAll ? <LockIcon /> : <UnlockIcon />}
+      </button>
+      <button
+        className={`dt-btn ${hideAll ? 'active' : ''}`}
+        title={hideAll ? 'Hiện tất cả hình vẽ' : 'Ẩn tất cả hình vẽ'}
+        onClick={toggleHideAll}
+      >
+        {hideAll ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
 
       <button
         className="dt-btn"

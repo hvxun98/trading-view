@@ -9,6 +9,7 @@ import type {
   SeriesType,
   Time,
 } from 'lightweight-charts'
+import { lineDash, RECT_HANDLES, styleOf } from '../lib/drawings'
 import { formatPrice, pricePrecision } from '../lib/intervals'
 import { theme } from '../lib/theme'
 import type { Drawing } from '../types'
@@ -27,9 +28,7 @@ interface Shape {
   preview: boolean
 }
 
-const LINE_COLOR = theme.accent
-const RECT_COLOR = 'rgb(156, 39, 176)'
-const RECT_FILL = 'rgba(156, 39, 176, 0.2)'
+const HANDLE_COLOR = theme.accent
 const HIT_TOLERANCE = 6
 const HANDLE_RADIUS = 5
 const HANDLE_HIT_RADIUS = 8
@@ -83,6 +82,8 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   private preview: Drawing | null = null
   private selectedId: string | null = null
   private hoveredId: string | null = null
+  private lockAll = false
+  private hideAll = false
   /** Bản nháp của hình đang được kéo (chưa ghi vào store) */
   private draft: Drawing | null = null
   private width = 0
@@ -107,7 +108,9 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     this.requestUpdate = null
   }
 
-  setState(drawings: Drawing[], selectedId: string | null) {
+  setState(drawings: Drawing[], selectedId: string | null, opts: { lockAll: boolean; hideAll: boolean }) {
+    this.lockAll = opts.lockAll
+    this.hideAll = opts.hideAll
     // Store đã nhận vị trí mới sau khi kéo -> bỏ bản nháp (không bỏ sớm hơn để tránh nháy hình)
     if (drawings !== this.drawings) this.draft = null
     this.drawings = drawings
@@ -138,7 +141,9 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
 
     const shapes: Shape[] = []
     const draft = this.draft
-    const current = draft ? this.drawings.map((d) => (d.id === draft.id ? draft : d)) : this.drawings
+    const current = (draft ? this.drawings.map((d) => (d.id === draft.id ? draft : d)) : this.drawings).filter(
+      (d) => !d.hidden && !this.hideAll,
+    )
     const all = this.preview ? [...current, this.preview] : current
     for (const d of all) {
       const pts = toXY(d)
@@ -158,7 +163,7 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
           coordinate: () => s.pts[0].y,
           text: () => formatPrice(price, pricePrecision(price)),
           textColor: () => '#fff',
-          backColor: () => LINE_COLOR,
+          backColor: () => styleOf(s.drawing).color,
         }
       })
   }
@@ -180,7 +185,26 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
       this.requestUpdate?.()
     }
     if (!hit) return null
-    return { externalId: hit.id, zOrder: 'top', cursorStyle: hit.anchor === null ? 'move' : 'pointer' }
+    return { externalId: hit.id, zOrder: 'top', cursorStyle: this.cursorFor(hit) }
+  }
+
+  isLocked(id: string): boolean {
+    return this.lockAll || !!this.drawings.find((d) => d.id === id)?.locked
+  }
+
+  private cursorFor(hit: DrawingHit): string {
+    if (this.isLocked(hit.id)) return 'pointer'
+    if (hit.anchor === null) return 'move'
+    const shape = this.shapes.find((s) => s.drawing.id === hit.id)
+    if (shape?.drawing.type !== 'rect') return 'pointer'
+    // Hình chữ nhật: mũi tên resize theo vị trí điểm neo, như TradingView
+    const [xs, ys] = RECT_HANDLES[hit.anchor]
+    if (xs === 'm') return 'ns-resize'
+    if (ys === 'm') return 'ew-resize'
+    const [a, b] = shape.pts
+    const dx = xs === 'a' ? a.x - b.x : b.x - a.x
+    const dy = ys === 'a' ? a.y - b.y : b.y - a.y
+    return dx * dy > 0 ? 'nwse-resize' : 'nesw-resize'
   }
 
   hit(p: XY): string | null {
@@ -189,7 +213,13 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
 
   /** Vị trí vẽ các điểm neo (đường ngang có 1 điểm neo ở giữa màn hình) */
   private handlePoints({ drawing, pts }: Shape): XY[] {
-    return drawing.type === 'hline' ? [{ x: this.width / 2, y: pts[0].y }] : pts
+    if (drawing.type === 'hline') return [{ x: this.width / 2, y: pts[0].y }]
+    if (drawing.type === 'rect') {
+      const [a, b] = pts
+      const pick = (src: string, va: number, vb: number) => (src === 'a' ? va : src === 'b' ? vb : (va + vb) / 2)
+      return RECT_HANDLES.map(([xs, ys]) => ({ x: pick(xs, a.x, b.x), y: pick(ys, a.y, b.y) }))
+    }
+    return pts
   }
 
   hitDetail(p: XY): DrawingHit | null {
@@ -263,8 +293,10 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
 
   private drawShape(ctx: Ctx, { drawing, pts }: Shape, width: number, height: number) {
     const [a, b] = pts
-    ctx.lineWidth = 2
-    ctx.strokeStyle = LINE_COLOR
+    const style = styleOf(drawing)
+    ctx.lineWidth = style.lineWidth
+    ctx.strokeStyle = style.color
+    ctx.setLineDash(lineDash(style.lineStyle, style.lineWidth))
 
     switch (drawing.type) {
       case 'trendline':
@@ -274,11 +306,9 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
         this.line(ctx, a, extend(a, b))
         break
       case 'hline':
-        ctx.lineWidth = 1
         this.line(ctx, { x: 0, y: a.y }, { x: width, y: a.y })
         break
       case 'vline':
-        ctx.lineWidth = 1
         this.line(ctx, { x: a.x, y: 0 }, { x: a.x, y: height })
         break
       case 'rect': {
@@ -286,10 +316,9 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
         const y = Math.min(a.y, b.y)
         const w = Math.abs(b.x - a.x)
         const h = Math.abs(b.y - a.y)
-        ctx.fillStyle = RECT_FILL
+        // Nền cùng màu viền với độ trong suốt 20% (mặc định của TradingView)
+        ctx.fillStyle = withAlpha(style.color, 0.2)
         ctx.fillRect(x, y, w, h)
-        ctx.lineWidth = 1
-        ctx.strokeStyle = RECT_COLOR
         ctx.strokeRect(x, y, w, h)
         break
       }
@@ -299,7 +328,10 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     }
   }
 
+  /** Các mức Fibonacci giữ màu riêng; style của hình áp dụng cho đường chéo */
   private drawFib(ctx: Ctx, drawing: Drawing, a: XY, b: XY) {
+    const diagonal = { color: ctx.strokeStyle, width: ctx.lineWidth, dash: ctx.getLineDash() }
+    ctx.setLineDash([])
     const series = this.series!
     const [p1, p2] = drawing.points
     const left = Math.min(a.x, b.x)
@@ -326,16 +358,18 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
       ctx.fillText(`${l.level} (${formatPrice(l.price)})`, left - 4, l.y + 6)
     }
 
-    // Đường chéo nét đứt nối 2 điểm neo
-    ctx.setLineDash([4, 4])
-    ctx.strokeStyle = '#787b86'
+    // Đường chéo nối 2 điểm neo
+    ctx.setLineDash(diagonal.dash)
+    ctx.strokeStyle = diagonal.color
+    ctx.lineWidth = diagonal.width
     this.line(ctx, a, b)
   }
 
   private drawHandles(ctx: Ctx, shape: Shape) {
     ctx.setLineDash([])
     ctx.lineWidth = 2
-    ctx.strokeStyle = LINE_COLOR
+    // Hình bị khoá: điểm neo màu xám (không kéo được)
+    ctx.strokeStyle = this.isLocked(shape.drawing.id) ? theme.textDim : HANDLE_COLOR
     ctx.fillStyle = theme.bg
     for (const p of this.handlePoints(shape)) {
       ctx.beginPath()

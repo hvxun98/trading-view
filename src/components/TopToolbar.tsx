@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { INTERVALS } from '../lib/intervals'
 import { useChartStore } from '../store/useChartStore'
 import { WATCHLIST } from '../lib/symbols'
+import { RedoIcon, UndoIcon } from './icons'
 
 export function TopToolbar() {
   const {
@@ -17,7 +18,11 @@ export function TopToolbar() {
     resetView,
     toggleInvertScale,
     toggleRsi,
+    undo,
+    redo,
   } = useChartStore()
+  const canUndo = useChartStore((s) => s.undoStack.length > 0)
+  const canRedo = useChartStore((s) => s.redoStack.length > 0)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [indicatorsOpen, setIndicatorsOpen] = useState(false)
@@ -109,6 +114,15 @@ export function TopToolbar() {
         title="Đảo ngược thang giá (Alt + I)"
       >
         ⇅ Invert scale
+      </button>
+
+      <div className="divider" />
+
+      <button className="tb-btn tb-icon" onClick={undo} disabled={!canUndo} title="Undo (Ctrl + Z)">
+        <UndoIcon />
+      </button>
+      <button className="tb-btn tb-icon" onClick={redo} disabled={!canRedo} title="Redo (Ctrl + Y)">
+        <RedoIcon />
       </button>
     </header>
   )
