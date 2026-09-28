@@ -1,4 +1,5 @@
 import { Chart } from './components/Chart'
+import { DrawingToolbar } from './components/DrawingToolbar'
 import { ReplayBar } from './components/ReplayBar'
 import { TopToolbar } from './components/TopToolbar'
 import { Watchlist } from './components/Watchlist'
@@ -11,6 +12,7 @@ export default function App() {
     <div className="app">
       <TopToolbar />
       <main className="main">
+        <DrawingToolbar />
         <div className="chart-area">
           <Chart />
           <ReplayBar />

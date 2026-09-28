@@ -325,6 +325,99 @@ select {
   color: var(--text-dim);
 }
 
+/* ---------- Drawing toolbar (bên trái) ---------- */
+.drawing-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 52px;
+  padding: 4px 0;
+  flex-shrink: 0;
+  border-right: 4px solid var(--border);
+  overflow-y: auto;
+}
+
+.dt-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 36px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dt-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.dt-btn.active {
+  color: var(--accent);
+  background: rgba(41, 98, 255, 0.15);
+}
+
+.dt-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.dt-divider {
+  width: 32px;
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
+
+.chart-wrap.drawing .chart {
+  cursor: crosshair;
+}
+
+/* ---------- Indicators ---------- */
+.menu-anchor {
+  position: relative;
+}
+
+.fx {
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+
+.pane-legend {
+  left: 12px;
+}
+
+.legend-name {
+  color: var(--text);
+}
+
+.legend-remove {
+  pointer-events: auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.legend-remove:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.context-menu li.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 /* ---------- Watchlist ---------- */
 .watchlist {
   width: 300px;
@@ -373,5 +466,9 @@ select {
 @media (max-width: 768px) {
   .watchlist {
     display: none;
+  }
+
+  .drawing-toolbar {
+    width: 44px;
   }
 }

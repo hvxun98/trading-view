@@ -60,14 +60,17 @@ nên có thể thêm nguồn mới (sàn khác, chứng khoán VN, server riêng
 - Kéo sang trái → tự tải thêm lịch sử (infinite scroll)
 - **Bar Replay**: chọn nến bắt đầu (click hoặc nhập ngày) → Play/Pause, Step, tốc độ 0.5x–10x, phím tắt
 - **Reset chart view** (toolbar, menu chuột phải, `Alt + R`) và nút `»` cuộn về realtime
+- Khung 3D và 1M
+- **Thanh công cụ vẽ** (Primitives API): trend line, ray, đường ngang/dọc, rectangle, Fibonacci retracement; chọn/xoá; lưu theo symbol
+- **RSI (14)** trong pane riêng (RMA như `ta.rsi` của TradingView), cập nhật cả khi realtime & replay
+- **Invert scale** (`Alt + I`)
 - Watchlist với giá & % thay đổi 24h realtime
 - Fallback dữ liệu Demo khi không kết nối được Binance
 
 ### Giai đoạn 2 — Giống TradingView hơn
 - Kiểu biểu đồ: Bars, Line, Area, Heikin Ashi, Hollow candles
-- Indicator overlay (MA, EMA, Bollinger) và pane riêng (RSI, MACD, Volume)
-- Thanh công cụ vẽ bên trái: trend line, horizontal line, ray, Fibonacci, rectangle, text
-  (dùng Plugins/Primitives API của lightweight-charts)
+- Indicator overlay (MA, EMA, Bollinger) và pane riêng (MACD, Stoch); tuỳ chỉnh tham số indicator
+- Hình vẽ: kéo thả để di chuyển/sửa điểm neo, đổi màu/độ dày, text, magnet mode
 - Replay nâng cao: replay trên khung nhỏ hơn, lùi nến (step back)
 - Thang log / %, auto-scale, nút "scroll to realtime", đổi timezone
 - Light theme, lưu cài đặt vào localStorage

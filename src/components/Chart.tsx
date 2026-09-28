@@ -4,6 +4,7 @@ import {
   ColorType,
   CrosshairMode,
   HistogramSeries,
+  LineSeries,
   LineStyle,
   createChart,
   type IChartApi,
@@ -13,18 +14,27 @@ import {
   type MouseEventParams,
   type Time,
 } from 'lightweight-charts'
+import { BandPrimitive } from '../chart/BandPrimitive'
+import { DrawingsPrimitive } from '../chart/DrawingsPrimitive'
 import { binanceFeed } from '../data/binance'
 import { mockFeed } from '../data/mock'
 import { pricePrecision } from '../lib/intervals'
+import { computeRsi } from '../lib/rsi'
 import { theme } from '../lib/theme'
+import { logicalToTime, timeToLogical } from '../lib/timeIndex'
 import { useChartStore } from '../store/useChartStore'
-import type { Candle, DataFeed } from '../types'
+import type { AnchorPoint, Candle, DataFeed, Drawing, DrawingTool } from '../types'
 import { Legend } from './Legend'
 
 const BAR_SPACING = 8
 const RIGHT_OFFSET = 10
 /** Giới hạn số trang lịch sử tải thêm khi nhảy tới một ngày cũ */
 const MAX_JUMP_PAGES = 50
+const RSI_PERIOD = 14
+const RSI_COLOR = '#7e57c2'
+/** Công cụ chỉ cần 1 click */
+const ONE_CLICK_TOOLS: DrawingTool[] = ['hline', 'vline']
+const NO_DRAWINGS: Drawing[] = []
 
 const volumeBar = (c: Candle) => ({
   time: c.time,
@@ -43,6 +53,10 @@ export function Chart() {
   const chartRef = useRef<IChartApi | null>(null)
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const volumeRef = useRef<ISeriesApi<'Histogram'> | null>(null)
+  const rsiRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const drawingsRef = useRef<DrawingsPrimitive | null>(null)
+  /** Điểm neo đầu tiên của hình vẽ 2 điểm đang vẽ dở */
+  const pendingRef = useRef<AnchorPoint | null>(null)
 
   /** Toàn bộ dữ liệu đã tải (kể cả phần "tương lai" khi đang replay) */
   const dataRef = useRef<Candle[]>([])
@@ -58,10 +72,35 @@ export function Chart() {
   const [selectOverlay, setSelectOverlay] = useState<SelectOverlay | null>(null)
   const [scrolledBack, setScrolledBack] = useState(false)
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const [rsiHovered, setRsiHovered] = useState<number | null>(null)
+  const [rsiLast, setRsiLast] = useState<number | null>(null)
+  const [rsiTop, setRsiTop] = useState<number | null>(null)
 
-  const { symbol, interval, replayMode, replayPlaying, replaySpeed, replayStep, replayJump, resetViewNonce } =
-    useChartStore()
-  const { setFeedName, activateReplay, setPlaying, setReplayTime, resetView } = useChartStore.getState()
+  const {
+    symbol,
+    interval,
+    replayMode,
+    replayPlaying,
+    replaySpeed,
+    replayStep,
+    replayJump,
+    resetViewNonce,
+    invertScale,
+    rsiEnabled,
+    activeTool,
+    selectedDrawingId,
+  } = useChartStore()
+  const drawings = useChartStore((s) => s.drawings[s.symbol]) ?? NO_DRAWINGS
+  const {
+    setFeedName,
+    activateReplay,
+    setPlaying,
+    setReplayTime,
+    resetView,
+    toggleInvertScale,
+    toggleRsi,
+    clearDrawings,
+  } = useChartStore.getState()
   const replayModeRef = useRef(replayMode)
   replayModeRef.current = replayMode
 
@@ -72,6 +111,32 @@ export function Chart() {
     candleRef.current?.setData(data)
     volumeRef.current?.setData(data.map(volumeBar))
     setLast(data.at(-1) ?? null)
+    if (rsiRef.current) {
+      const rsi = computeRsi(data, RSI_PERIOD)
+      rsiRef.current.setData(rsi)
+      setRsiLast(rsi.at(-1)?.value ?? null)
+    }
+    drawingsRef.current?.refresh()
+  }
+
+  /** Cập nhật nến cuối (realtime hoặc replay). `data` là dữ liệu đang hiển thị, kết thúc bằng `bar`. */
+  const pushBar = (bar: Candle, data: Candle[]) => {
+    candleRef.current?.update(bar)
+    volumeRef.current?.update(volumeBar(bar))
+    setLast(bar)
+    if (rsiRef.current) {
+      const point = computeRsi(data, RSI_PERIOD).at(-1)
+      if (point) {
+        rsiRef.current.update(point)
+        setRsiLast(point.value)
+      }
+    }
+  }
+
+  const measureRsiPane = () => {
+    const pane = chartRef.current?.panes()[1]?.getHTMLElement()
+    const container = containerRef.current
+    setRsiTop(pane && container ? pane.getBoundingClientRect().top - container.getBoundingClientRect().top : null)
   }
 
   const startReplayAt = (idx: number) => {
@@ -172,6 +237,23 @@ export function Chart() {
     candleRef.current = candles
     volumeRef.current = volume
 
+    // Lớp hình vẽ: toạ độ x tính từ thời gian để không lệch khi tải thêm lịch sử
+    const drawingsPrimitive = new DrawingsPrimitive((time) => {
+      const logical = timeToLogical(time, dataRef.current)
+      return logical === null ? null : chart.timeScale().logicalToCoordinate(logical as Logical)
+    })
+    candles.attachPrimitive(drawingsPrimitive)
+    drawingsRef.current = drawingsPrimitive
+
+    /** Điểm neo tại toạ độ trong pane giá (x bắt dính vào nến gần nhất) */
+    const anchorAt = (x: number, y: number): AnchorPoint | null => {
+      const logical = chart.timeScale().coordinateToLogical(x)
+      if (logical === null) return null
+      const time = logicalToTime(Math.round(logical), dataRef.current)
+      const price = candles.coordinateToPrice(y)
+      return time === null || price === null ? null : { time, price }
+    }
+
     // Crosshair: legend OHLC + vạch chọn điểm replay
     const onMove = (param: MouseEventParams<Time>) => {
       if (replayModeRef.current === 'selecting' && param.point && param.logical !== undefined) {
@@ -185,6 +267,18 @@ export function Chart() {
         setSelectOverlay(null)
       }
 
+      // Xem trước hình vẽ 2 điểm đang vẽ dở
+      const tool = useChartStore.getState().activeTool
+      if (tool !== 'cursor' && pendingRef.current && param.point && (param.paneIndex ?? 0) === 0) {
+        const end = anchorAt(param.point.x, param.point.y)
+        if (end) drawingsPrimitive.setPreview({ id: 'preview', type: tool, points: [pendingRef.current, end] })
+      }
+
+      const rsiSeries = rsiRef.current
+      const rsiPoint = rsiSeries && param.time ? param.seriesData.get(rsiSeries) : undefined
+      setRsiHovered(rsiPoint && 'value' in rsiPoint ? (rsiPoint.value as number) : null)
+      if (rsiSeries) measureRsiPane()
+
       const bar = param.time ? param.seriesData.get(candles) : undefined
       if (!bar) {
         setHovered(null)
@@ -196,21 +290,68 @@ export function Chart() {
       setPrevClose(idx > 0 ? data[idx - 1].close : null)
     }
 
-    // Click bất kỳ đâu trên chart (kể cả vùng trống) -> chọn nến gần nhất
-    const onClick = (param: MouseEventParams<Time>) => {
-      setMenu(null)
-      if (replayModeRef.current !== 'selecting' || param.logical === undefined) return
-      startReplayAt(Math.round(param.logical))
+    // Xử lý click bằng sự kiện DOM thay vì chart.subscribeClick, vì lightweight-charts bỏ qua
+    // click thứ 2 nếu nó tới trong 500ms (khoảng double-click) ở vị trí khác click đầu
+    // -> vẽ nhanh 2 điểm hoặc click chọn hình ngay sau khi vẽ sẽ bị mất.
+    const container = containerRef.current!
+    let downAt: { x: number; y: number } | null = null
+    const onPointerDown = (e: PointerEvent) => {
+      downAt = { x: e.clientX, y: e.clientY }
     }
+    const onDomClick = (e: MouseEvent) => {
+      // Bỏ qua nếu đây là thao tác kéo chart
+      if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 5) return
+      const paneEl = chart.panes()[0]?.getHTMLElement()
+      if (!paneEl) return
+      const rect = paneEl.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      if (x < 0 || x > chart.timeScale().width()) return
+      const store = useChartStore.getState()
+
+      // Chọn điểm replay: click bất kỳ đâu (kể cả vùng trống, pane RSI) -> nến gần nhất
+      if (replayModeRef.current === 'selecting') {
+        const logical = chart.timeScale().coordinateToLogical(x)
+        if (logical !== null) startReplayAt(Math.round(logical))
+        return
+      }
+
+      const inPricePane = y >= 0 && y <= rect.height
+      const tool = store.activeTool
+      if (tool === 'cursor') {
+        store.selectDrawing(inPricePane ? drawingsPrimitive.hit({ x, y }) : null)
+        return
+      }
+      if (!inPricePane) return
+
+      const point = anchorAt(x, y)
+      if (!point) return
+      const finish = (points: AnchorPoint[]) => {
+        pendingRef.current = null
+        drawingsPrimitive.setPreview(null)
+        store.addDrawing({ id: crypto.randomUUID(), type: tool, points })
+        store.setTool('cursor')
+      }
+      if (ONE_CLICK_TOOLS.includes(tool)) finish([point])
+      else if (!pendingRef.current) {
+        pendingRef.current = point
+        drawingsPrimitive.setPreview({ id: 'preview', type: tool, points: [point, point] })
+      } else finish([pendingRef.current, point])
+    }
+    container.addEventListener('pointerdown', onPointerDown)
+    container.addEventListener('click', onDomClick)
 
     chart.subscribeCrosshairMove(onMove)
-    chart.subscribeClick(onClick)
 
     return () => {
+      container.removeEventListener('pointerdown', onPointerDown)
+      container.removeEventListener('click', onDomClick)
       chart.remove()
       chartRef.current = null
       candleRef.current = null
       volumeRef.current = null
+      rsiRef.current = null
+      drawingsRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -254,9 +395,7 @@ export function Chart() {
         else arr.push(bar)
         // Khi đang replay chỉ lưu dữ liệu, không vẽ
         if (replayModeRef.current === 'active') return
-        candleRef.current?.update(bar)
-        volumeRef.current?.update(volumeBar(bar))
-        setLast(bar)
+        pushBar(bar, arr)
       })
     }
     load()
@@ -305,9 +444,7 @@ export function Chart() {
       return
     }
     replayIndexRef.current = next
-    candleRef.current?.update(bar)
-    volumeRef.current?.update(volumeBar(bar))
-    setLast(bar)
+    pushBar(bar, dataRef.current.slice(0, next + 1))
     setReplayTime(bar.time)
   }
 
@@ -356,6 +493,78 @@ export function Chart() {
     volumeRef.current?.priceScale().applyOptions({ autoScale: true })
   }, [resetViewNonce])
 
+  // 8. Đảo ngược thang giá (Invert scale)
+  useEffect(() => {
+    chartRef.current?.priceScale('right').applyOptions({ invertScale })
+  }, [invertScale])
+
+  // 9. Indicator RSI trong pane riêng bên dưới
+  useEffect(() => {
+    const chart = chartRef.current
+    if (!chart || !rsiEnabled) return
+
+    const rsi = chart.addSeries(
+      LineSeries,
+      {
+        color: RSI_COLOR,
+        lineWidth: 1,
+        priceLineVisible: false,
+        priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+        // Luôn hiển thị đủ vùng 30–70
+        autoscaleInfoProvider: (original: () => { priceRange: { minValue: number; maxValue: number } } | null) => {
+          const res = original()
+          if (!res) return res
+          return {
+            ...res,
+            priceRange: {
+              minValue: Math.min(res.priceRange.minValue, 30),
+              maxValue: Math.max(res.priceRange.maxValue, 70),
+            },
+          }
+        },
+      },
+      1,
+    )
+    rsi.priceScale().applyOptions({ scaleMargins: { top: 0.1, bottom: 0.1 } })
+    rsi.attachPrimitive(new BandPrimitive(30, 70, 'rgba(126, 87, 194, 0.1)'))
+    for (const [price, style] of [
+      [70, LineStyle.Dashed],
+      [50, LineStyle.Dotted],
+      [30, LineStyle.Dashed],
+    ] as const) {
+      rsi.createPriceLine({ price, color: '#787b86', lineWidth: 1, lineStyle: style, axisLabelVisible: false })
+    }
+    chart.panes()[0]?.setStretchFactor(3)
+    chart.panes()[1]?.setStretchFactor(1)
+
+    rsiRef.current = rsi
+    const data = computeRsi(visibleData(), RSI_PERIOD)
+    rsi.setData(data)
+    setRsiLast(data.at(-1)?.value ?? null)
+    const raf = requestAnimationFrame(measureRsiPane)
+    window.addEventListener('resize', measureRsiPane)
+
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', measureRsiPane)
+      rsiRef.current = null
+      setRsiTop(null)
+      // Chart có thể đã bị huỷ trước (unmount)
+      if (chartRef.current === chart) chart.removeSeries(rsi)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rsiEnabled])
+
+  // 10. Hình vẽ: đồng bộ từ store vào lớp vẽ; đổi công cụ thì huỷ hình đang vẽ dở
+  useEffect(() => {
+    drawingsRef.current?.setState(drawings, selectedDrawingId)
+  }, [drawings, selectedDrawingId])
+
+  useEffect(() => {
+    pendingRef.current = null
+    drawingsRef.current?.setPreview(null)
+  }, [activeTool, symbol])
+
   // Khi không hover, legend hiển thị nến cuối cùng
   const shown = hovered ?? last
   const data = visibleData()
@@ -363,7 +572,7 @@ export function Chart() {
 
   return (
     <div
-      className={`chart-wrap ${replayMode === 'selecting' ? 'selecting' : ''}`}
+      className={`chart-wrap ${replayMode === 'selecting' ? 'selecting' : ''} ${activeTool !== 'cursor' ? 'drawing' : ''}`}
       onContextMenu={(e) => {
         e.preventDefault()
         const rect = e.currentTarget.getBoundingClientRect()
@@ -373,6 +582,18 @@ export function Chart() {
     >
       <div ref={containerRef} className="chart" />
       <Legend candle={shown} prevClose={shownPrev} />
+
+      {rsiEnabled && rsiTop !== null && (
+        <div className="legend pane-legend" style={{ top: rsiTop + 6 }}>
+          <div className="legend-ohlc">
+            <span className="legend-name">RSI {RSI_PERIOD} close</span>
+            <span style={{ color: RSI_COLOR }}>{(rsiHovered ?? rsiLast)?.toFixed(2) ?? '—'}</span>
+            <button className="legend-remove" onClick={toggleRsi} title="Xoá RSI">
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {replayMode === 'selecting' && selectOverlay && (
         <div
@@ -406,6 +627,24 @@ export function Chart() {
             >
               <span>⟲ Reset chart view</span>
               <kbd>Alt + R</kbd>
+            </li>
+            <li
+              onClick={() => {
+                toggleInvertScale()
+                setMenu(null)
+              }}
+            >
+              <span>{invertScale ? '✓' : '\u2003'} Invert scale</span>
+              <kbd>Alt + I</kbd>
+            </li>
+            <li
+              className={drawings.length ? '' : 'disabled'}
+              onClick={() => {
+                clearDrawings()
+                setMenu(null)
+              }}
+            >
+              <span>🗑 Remove drawings</span>
             </li>
           </ul>
         </>

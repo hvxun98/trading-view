@@ -7,7 +7,10 @@ export const INTERVALS: { value: Interval; label: string; seconds: number }[] = 
   { value: '1h', label: '1H', seconds: 3600 },
   { value: '4h', label: '4H', seconds: 14400 },
   { value: '1d', label: '1D', seconds: 86400 },
+  { value: '3d', label: '3D', seconds: 259200 },
   { value: '1w', label: '1W', seconds: 604800 },
+  // Tháng có độ dài khác nhau; con số này chỉ dùng cho dữ liệu Demo
+  { value: '1M', label: '1M', seconds: 2592000 },
 ]
 
 export function intervalSeconds(interval: Interval): number {

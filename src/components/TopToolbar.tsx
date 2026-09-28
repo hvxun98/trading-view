@@ -4,10 +4,23 @@ import { useChartStore } from '../store/useChartStore'
 import { WATCHLIST } from '../lib/symbols'
 
 export function TopToolbar() {
-  const { symbol, interval, replayMode, setSymbol, setInterval, startReplaySelect, exitReplay, resetView } =
-    useChartStore()
+  const {
+    symbol,
+    interval,
+    replayMode,
+    invertScale,
+    rsiEnabled,
+    setSymbol,
+    setInterval,
+    startReplaySelect,
+    exitReplay,
+    resetView,
+    toggleInvertScale,
+    toggleRsi,
+  } = useChartStore()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+  const [indicatorsOpen, setIndicatorsOpen] = useState(false)
 
   const q = query.trim().toUpperCase()
   const suggestions = WATCHLIST.filter((s) => s.includes(q))
@@ -58,6 +71,26 @@ export function TopToolbar() {
 
       <div className="divider" />
 
+      <div className="menu-anchor">
+        <button
+          className={`tb-btn ${indicatorsOpen ? 'active' : ''}`}
+          onClick={() => setIndicatorsOpen((v) => !v)}
+          onBlur={() => setTimeout(() => setIndicatorsOpen(false), 150)}
+          title="Indicators"
+        >
+          <i className="fx">ƒx</i> Indicators
+        </button>
+        {indicatorsOpen && (
+          <ul className="symbol-dropdown">
+            <li onMouseDown={toggleRsi}>
+              {rsiEnabled ? '✓' : '\u2003'} Relative Strength Index (RSI)
+            </li>
+          </ul>
+        )}
+      </div>
+
+      <div className="divider" />
+
       <button
         className={`tb-btn ${replayMode !== 'off' ? 'active' : ''}`}
         onClick={() => (replayMode === 'off' ? startReplaySelect() : exitReplay())}
@@ -68,6 +101,14 @@ export function TopToolbar() {
 
       <button className="tb-btn" onClick={resetView} title="Đặt lại chế độ xem biểu đồ (Alt + R)">
         ⟲ Reset view
+      </button>
+
+      <button
+        className={`tb-btn ${invertScale ? 'active' : ''}`}
+        onClick={toggleInvertScale}
+        title="Đảo ngược thang giá (Alt + I)"
+      >
+        ⇅ Invert scale
       </button>
     </header>
   )
