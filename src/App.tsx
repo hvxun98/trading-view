@@ -1,8 +1,8 @@
 import { Chart } from './components/Chart'
 import { DrawingToolbar } from './components/DrawingToolbar'
 import { ReplayBar } from './components/ReplayBar'
+import { RightPanel } from './components/RightPanel'
 import { TopToolbar } from './components/TopToolbar'
-import { Watchlist } from './components/Watchlist'
 import { useHotkeys } from './hooks/useHotkeys'
 
 export default function App() {
@@ -17,7 +17,7 @@ export default function App() {
           <Chart />
           <ReplayBar />
         </div>
-        <Watchlist />
+        <RightPanel />
       </main>
     </div>
   )

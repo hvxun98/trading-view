@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import type { Drawing, Interval, ReplayMode, Tool } from '../types'
+import type { AnchorPoint, Drawing, Interval, ReplayMode, Tool } from '../types'
 
 interface ChartState {
   symbol: string
@@ -49,6 +49,8 @@ interface ChartState {
   addDrawing: (drawing: Drawing) => void
   selectDrawing: (id: string | null) => void
   removeSelectedDrawing: () => void
+  removeDrawing: (id: string) => void
+  updateDrawing: (id: string, points: AnchorPoint[]) => void
   clearDrawings: () => void
 }
 
@@ -114,6 +116,18 @@ export const useChartStore = create<ChartState>()(
             [s.symbol]: (s.drawings[s.symbol] ?? []).filter((d) => d.id !== s.selectedDrawingId),
           },
           selectedDrawingId: null,
+        })),
+      removeDrawing: (id) =>
+        set((s) => ({
+          drawings: { ...s.drawings, [s.symbol]: (s.drawings[s.symbol] ?? []).filter((d) => d.id !== id) },
+          selectedDrawingId: s.selectedDrawingId === id ? null : s.selectedDrawingId,
+        })),
+      updateDrawing: (id, points) =>
+        set((s) => ({
+          drawings: {
+            ...s.drawings,
+            [s.symbol]: (s.drawings[s.symbol] ?? []).map((d) => (d.id === id ? { ...d, points } : d)),
+          },
         })),
       clearDrawings: () => set((s) => ({ drawings: { ...s.drawings, [s.symbol]: [] }, selectedDrawingId: null })),
     }),

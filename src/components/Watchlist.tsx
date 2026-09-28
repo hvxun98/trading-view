@@ -19,8 +19,7 @@ export function Watchlist() {
   }, [])
 
   return (
-    <aside className="watchlist">
-      <div className="watchlist-header">Watchlist</div>
+    <div className="watchlist">
       <div className="watchlist-row watchlist-cols">
         <span>Symbol</span>
         <span>Last</span>
@@ -38,6 +37,6 @@ export function Watchlist() {
           </div>
         )
       })}
-    </aside>
+    </div>
   )
 }

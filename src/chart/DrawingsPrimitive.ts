@@ -31,6 +31,14 @@ const LINE_COLOR = theme.accent
 const RECT_COLOR = 'rgb(156, 39, 176)'
 const RECT_FILL = 'rgba(156, 39, 176, 0.2)'
 const HIT_TOLERANCE = 6
+const HANDLE_RADIUS = 5
+const HANDLE_HIT_RADIUS = 8
+
+/** Kết quả hit-test: hình nào, và điểm neo nào (null = thân hình) */
+export interface DrawingHit {
+  id: string
+  anchor: number | null
+}
 
 // Các mức Fibonacci mặc định của TradingView
 export const FIB_LEVELS = [
@@ -74,6 +82,10 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   private drawings: Drawing[] = []
   private preview: Drawing | null = null
   private selectedId: string | null = null
+  private hoveredId: string | null = null
+  /** Bản nháp của hình đang được kéo (chưa ghi vào store) */
+  private draft: Drawing | null = null
+  private width = 0
   private shapes: Shape[] = []
   private axisViews: ISeriesPrimitiveAxisView[] = []
   private readonly views: IPrimitivePaneView[]
@@ -96,8 +108,15 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   }
 
   setState(drawings: Drawing[], selectedId: string | null) {
+    // Store đã nhận vị trí mới sau khi kéo -> bỏ bản nháp (không bỏ sớm hơn để tránh nháy hình)
+    if (drawings !== this.drawings) this.draft = null
     this.drawings = drawings
     this.selectedId = selectedId
+    this.requestUpdate?.()
+  }
+
+  setDraft(draft: Drawing | null) {
+    this.draft = draft
     this.requestUpdate?.()
   }
 
@@ -118,7 +137,9 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
       d.points.map((p) => ({ x: this.timeToX(p.time), y: series.priceToCoordinate(p.price) }))
 
     const shapes: Shape[] = []
-    const all = this.preview ? [...this.drawings, this.preview] : this.drawings
+    const draft = this.draft
+    const current = draft ? this.drawings.map((d) => (d.id === draft.id ? draft : d)) : this.drawings
+    const all = this.preview ? [...current, this.preview] : current
     for (const d of all) {
       const pts = toXY(d)
       // hline không cần x, vline không cần y
@@ -150,17 +171,42 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     return this.axisViews
   }
 
-  /** Cho biết con trỏ đang nằm trên hình vẽ nào (dùng cho con trỏ chuột & click chọn) */
+  /** lightweight-charts gọi khi rê chuột: đổi con trỏ & hiện điểm neo khi hover (giống TradingView) */
   hitTest(x: number, y: number): PrimitiveHoveredItem | null {
-    const id = this.hit({ x, y })
-    return id ? { externalId: id, zOrder: 'top', cursorStyle: 'pointer' } : null
+    const hit = this.hitDetail({ x, y })
+    const hoveredId = hit?.id ?? null
+    if (hoveredId !== this.hoveredId) {
+      this.hoveredId = hoveredId
+      this.requestUpdate?.()
+    }
+    if (!hit) return null
+    return { externalId: hit.id, zOrder: 'top', cursorStyle: hit.anchor === null ? 'move' : 'pointer' }
   }
 
   hit(p: XY): string | null {
-    // Duyệt ngược: hình vẽ sau nằm trên
+    return this.hitDetail(p)?.id ?? null
+  }
+
+  /** Vị trí vẽ các điểm neo (đường ngang có 1 điểm neo ở giữa màn hình) */
+  private handlePoints({ drawing, pts }: Shape): XY[] {
+    return drawing.type === 'hline' ? [{ x: this.width / 2, y: pts[0].y }] : pts
+  }
+
+  hitDetail(p: XY): DrawingHit | null {
+    // Ưu tiên điểm neo của hình đang chọn, sau đó duyệt ngược (hình vẽ sau nằm trên)
+    const selected = this.shapes.find((s) => !s.preview && s.drawing.id === this.selectedId)
+    if (selected) {
+      const idx = this.handlePoints(selected).findIndex((h) => Math.hypot(h.x - p.x, h.y - p.y) <= HANDLE_HIT_RADIUS)
+      if (idx >= 0) return { id: selected.drawing.id, anchor: idx }
+    }
+
     for (let i = this.shapes.length - 1; i >= 0; i--) {
-      const { drawing, pts, preview } = this.shapes[i]
+      const shape = this.shapes[i]
+      const { drawing, pts, preview } = shape
       if (preview) continue
+      const idx = this.handlePoints(shape).findIndex((h) => Math.hypot(h.x - p.x, h.y - p.y) <= HANDLE_HIT_RADIUS)
+      if (idx >= 0) return { id: drawing.id, anchor: idx }
+
       const [a, b] = pts
       let d = Infinity
       switch (drawing.type) {
@@ -184,17 +230,32 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
           break
         }
       }
-      if (d <= HIT_TOLERANCE) return drawing.id
+      if (d <= HIT_TOLERANCE) return { id: drawing.id, anchor: null }
     }
     return null
   }
 
+  /** Khung bao (toạ độ pane) của một hình, để đặt thanh công cụ nổi */
+  bounds(id: string): { left: number; right: number; top: number; bottom: number } | null {
+    const shape = this.shapes.find((s) => s.drawing.id === id)
+    if (!shape) return null
+    const pts = this.handlePoints(shape)
+    return {
+      left: Math.min(...pts.map((p) => p.x)),
+      right: Math.max(...pts.map((p) => p.x)),
+      top: Math.min(...pts.map((p) => p.y)),
+      bottom: Math.max(...pts.map((p) => p.y)),
+    }
+  }
+
   private draw(target: Target) {
     target.useMediaCoordinateSpace(({ context: ctx, mediaSize }) => {
+      this.width = mediaSize.width
       for (const shape of this.shapes) {
+        const id = shape.drawing.id
         ctx.save()
         this.drawShape(ctx, shape, mediaSize.width, mediaSize.height)
-        if (shape.preview || shape.drawing.id === this.selectedId) this.drawHandles(ctx, shape, mediaSize.width)
+        if (shape.preview || id === this.selectedId || id === this.hoveredId) this.drawHandles(ctx, shape)
         ctx.restore()
       }
     })
@@ -271,15 +332,14 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     this.line(ctx, a, b)
   }
 
-  private drawHandles(ctx: Ctx, { drawing, pts }: Shape, width: number) {
+  private drawHandles(ctx: Ctx, shape: Shape) {
     ctx.setLineDash([])
     ctx.lineWidth = 2
     ctx.strokeStyle = LINE_COLOR
     ctx.fillStyle = theme.bg
-    const handles = drawing.type === 'hline' ? [{ x: width / 2, y: pts[0].y }] : pts
-    for (const p of handles) {
+    for (const p of this.handlePoints(shape)) {
       ctx.beginPath()
-      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2)
+      ctx.arc(p.x, p.y, HANDLE_RADIUS, 0, Math.PI * 2)
       ctx.fill()
       ctx.stroke()
     }

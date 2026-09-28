@@ -419,17 +419,167 @@ select {
 }
 
 /* ---------- Watchlist ---------- */
-.watchlist {
+/* ---------- Right panel: Watchlist / Object Tree ---------- */
+.right-panel {
+  display: flex;
+  flex-direction: column;
   width: 300px;
   flex-shrink: 0;
   border-left: 4px solid var(--border);
+}
+
+.panel-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.panel-tab:hover {
+  background: var(--hover);
+}
+
+.panel-tab.active {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.panel-badge {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.panel-body {
+  flex: 1;
   overflow-y: auto;
 }
 
-.watchlist-header {
-  padding: 12px;
-  font-weight: 600;
-  font-size: 14px;
+.panel-body[hidden] {
+  display: none;
+}
+
+.panel-empty {
+  padding: 24px 16px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.watchlist {
+  padding-top: 4px;
+}
+
+.object-tree-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 6px 12px;
+  color: var(--text-dim);
+}
+
+.object-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  cursor: pointer;
+}
+
+.object-row:hover {
+  background: var(--hover);
+}
+
+.object-row.active {
+  background: rgba(41, 98, 255, 0.15);
+}
+
+.object-name {
+  white-space: nowrap;
+}
+
+.object-desc {
+  flex: 1;
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.object-remove {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.object-row:hover .object-remove,
+.object-row.active .object-remove {
+  opacity: 1;
+}
+
+.object-remove:hover {
+  background: var(--border);
+}
+
+/* ---------- Thanh công cụ nổi của hình đang chọn ---------- */
+.float-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 4px 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.float-toolbar-name {
+  margin-right: 6px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.chart-wrap .chart.dragging,
+.chart-wrap .chart.dragging * {
+  cursor: grabbing !important;
+}
+
+.context-menu .menu-divider {
+  height: 1px;
+  margin: 4px 0;
+  padding: 0;
+  background: var(--border);
+  pointer-events: none;
 }
 
 .watchlist-row {
@@ -464,7 +614,7 @@ select {
 }
 
 @media (max-width: 768px) {
-  .watchlist {
+  .right-panel {
     display: none;
   }
 

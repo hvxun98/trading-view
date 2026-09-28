@@ -18,6 +18,7 @@ import { BandPrimitive } from '../chart/BandPrimitive'
 import { DrawingsPrimitive } from '../chart/DrawingsPrimitive'
 import { binanceFeed } from '../data/binance'
 import { mockFeed } from '../data/mock'
+import { DRAWING_LABELS, moveAnchor, translateDrawing } from '../lib/drawings'
 import { pricePrecision } from '../lib/intervals'
 import { computeRsi } from '../lib/rsi'
 import { theme } from '../lib/theme'
@@ -71,7 +72,7 @@ export function Chart() {
   const [prevClose, setPrevClose] = useState<number | null>(null)
   const [selectOverlay, setSelectOverlay] = useState<SelectOverlay | null>(null)
   const [scrolledBack, setScrolledBack] = useState(false)
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const [menu, setMenu] = useState<{ x: number; y: number; drawingId: string | null } | null>(null)
   const [rsiHovered, setRsiHovered] = useState<number | null>(null)
   const [rsiLast, setRsiLast] = useState<number | null>(null)
   const [rsiTop, setRsiTop] = useState<number | null>(null)
@@ -100,6 +101,8 @@ export function Chart() {
     toggleInvertScale,
     toggleRsi,
     clearDrawings,
+    addDrawing,
+    removeDrawing,
   } = useChartStore.getState()
   const replayModeRef = useRef(replayMode)
   replayModeRef.current = replayMode
@@ -341,11 +344,78 @@ export function Chart() {
     container.addEventListener('pointerdown', onPointerDown)
     container.addEventListener('click', onDomClick)
 
+    // Kéo thả hình vẽ: kéo thân để di chuyển, kéo điểm neo để sửa.
+    // Nghe mousedown ở capture phase và chặn lan truyền để lightweight-charts không kéo chart theo.
+    let drag: {
+      drawing: Drawing
+      anchor: number | null
+      startLogical: number
+      startPrice: number
+      points: AnchorPoint[] | null
+    } | null = null
+
+    const paneXY = (e: MouseEvent) => {
+      const rect = chart.panes()[0]?.getHTMLElement()?.getBoundingClientRect()
+      return rect ? { x: e.clientX - rect.left, y: e.clientY - rect.top, height: rect.height } : null
+    }
+
+    const onDragMove = (e: MouseEvent) => {
+      const p = drag && paneXY(e)
+      if (!drag || !p) return
+      const logical = chart.timeScale().coordinateToLogical(p.x)
+      const price = candles.coordinateToPrice(p.y)
+      if (logical === null || price === null) return
+      const data = dataRef.current
+      if (drag.anchor === null) {
+        // Di chuyển theo từng nến (giống TradingView), giá thì tự do
+        drag.points = translateDrawing(drag.drawing, Math.round(logical - drag.startLogical), price - drag.startPrice, data)
+      } else {
+        const time = logicalToTime(Math.round(logical), data)
+        if (time === null) return
+        drag.points = moveAnchor(drag.drawing, drag.anchor, { time, price })
+      }
+      drawingsPrimitive.setDraft({ ...drag.drawing, points: drag.points })
+    }
+
+    const onDragEnd = () => {
+      window.removeEventListener('mousemove', onDragMove)
+      window.removeEventListener('mouseup', onDragEnd)
+      container.classList.remove('dragging')
+      if (drag?.points) useChartStore.getState().updateDrawing(drag.drawing.id, drag.points)
+      else drawingsPrimitive.setDraft(null)
+      drag = null
+    }
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return
+      const store = useChartStore.getState()
+      if (store.activeTool !== 'cursor' || replayModeRef.current === 'selecting') return
+      const p = paneXY(e)
+      if (!p || p.x < 0 || p.y < 0 || p.y > p.height || p.x > chart.timeScale().width()) return
+      const hit = drawingsPrimitive.hitDetail(p)
+      const drawing = hit && (store.drawings[store.symbol] ?? []).find((d) => d.id === hit.id)
+      const startLogical = chart.timeScale().coordinateToLogical(p.x)
+      const startPrice = candles.coordinateToPrice(p.y)
+      if (!hit || !drawing || startLogical === null || startPrice === null) return
+
+      e.stopPropagation()
+      e.preventDefault()
+      store.selectDrawing(hit.id)
+      drag = { drawing, anchor: hit.anchor, startLogical, startPrice, points: null }
+      container.classList.add('dragging')
+      window.addEventListener('mousemove', onDragMove)
+      window.addEventListener('mouseup', onDragEnd)
+    }
+    container.addEventListener('mousedown', onMouseDown, true)
+
     chart.subscribeCrosshairMove(onMove)
 
     return () => {
       container.removeEventListener('pointerdown', onPointerDown)
       container.removeEventListener('click', onDomClick)
+      container.removeEventListener('mousedown', onMouseDown, true)
+      window.removeEventListener('mousemove', onDragMove)
+      window.removeEventListener('mouseup', onDragEnd)
       chart.remove()
       chartRef.current = null
       candleRef.current = null
@@ -565,6 +635,29 @@ export function Chart() {
     drawingsRef.current?.setPreview(null)
   }, [activeTool, symbol])
 
+  const selectedDrawing = drawings.find((d) => d.id === selectedDrawingId) ?? null
+
+  /** Nhân bản hình: dịch sang phải 5 nến (đường ngang thì dịch xuống 20px) và chọn bản mới */
+  const cloneDrawing = (id: string) => {
+    const d = drawings.find((x) => x.id === id)
+    const candles = candleRef.current
+    if (!d || !candles) return
+    let dPrice = 0
+    if (d.type === 'hline') {
+      const y = candles.priceToCoordinate(d.points[0].price)
+      const shifted = y === null ? null : candles.coordinateToPrice(y + 20)
+      dPrice = shifted === null ? 0 : shifted - d.points[0].price
+    }
+    addDrawing({ ...d, id: crypto.randomUUID(), points: translateDrawing(d, 5, dPrice, dataRef.current) })
+  }
+
+  /** Hình vẽ tại vị trí chuột (toạ độ client), dùng cho menu chuột phải */
+  const drawingAtClient = (clientX: number, clientY: number): string | null => {
+    const rect = chartRef.current?.panes()[0]?.getHTMLElement()?.getBoundingClientRect()
+    if (!rect || !drawingsRef.current) return null
+    return drawingsRef.current.hit({ x: clientX - rect.left, y: clientY - rect.top })
+  }
+
   // Khi không hover, legend hiển thị nến cuối cùng
   const shown = hovered ?? last
   const data = visibleData()
@@ -576,7 +669,9 @@ export function Chart() {
       onContextMenu={(e) => {
         e.preventDefault()
         const rect = e.currentTarget.getBoundingClientRect()
-        setMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+        const drawingId = drawingAtClient(e.clientX, e.clientY)
+        if (drawingId) useChartStore.getState().selectDrawing(drawingId)
+        setMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top, drawingId })
       }}
       onMouseLeave={() => setSelectOverlay(null)}
     >
@@ -605,6 +700,18 @@ export function Chart() {
         <div className="chart-hint">Click vào chart để chọn điểm bắt đầu replay (kéo sang trái để về mốc cũ)</div>
       )}
 
+      {selectedDrawing && replayMode !== 'selecting' && (
+        <div className="float-toolbar" onMouseDown={(e) => e.stopPropagation()}>
+          <span className="float-toolbar-name">{DRAWING_LABELS[selectedDrawing.type]}</span>
+          <button className="tb-btn" title="Clone" onClick={() => cloneDrawing(selectedDrawing.id)}>
+            ⧉
+          </button>
+          <button className="tb-btn" title="Remove (Delete)" onClick={() => removeDrawing(selectedDrawing.id)}>
+            🗑
+          </button>
+        </div>
+      )}
+
       {scrolledBack && (
         <button
           className="scroll-realtime"
@@ -619,6 +726,28 @@ export function Chart() {
         <>
           <div className="context-backdrop" onMouseDown={() => setMenu(null)} />
           <ul className="context-menu" style={{ left: menu.x, top: menu.y }}>
+            {menu.drawingId && (
+              <>
+                <li
+                  onClick={() => {
+                    cloneDrawing(menu.drawingId!)
+                    setMenu(null)
+                  }}
+                >
+                  <span>⧉ Clone</span>
+                </li>
+                <li
+                  onClick={() => {
+                    removeDrawing(menu.drawingId!)
+                    setMenu(null)
+                  }}
+                >
+                  <span>🗑 Remove</span>
+                  <kbd>Del</kbd>
+                </li>
+                <li className="menu-divider" />
+              </>
+            )}
             <li
               onClick={() => {
                 resetView()
