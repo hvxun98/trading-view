@@ -2,8 +2,11 @@ import { Chart } from './components/Chart'
 import { ReplayBar } from './components/ReplayBar'
 import { TopToolbar } from './components/TopToolbar'
 import { Watchlist } from './components/Watchlist'
+import { useHotkeys } from './hooks/useHotkeys'
 
 export default function App() {
+  useHotkeys()
+
   return (
     <div className="app">
       <TopToolbar />

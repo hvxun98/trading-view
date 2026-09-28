@@ -4,7 +4,8 @@ import { useChartStore } from '../store/useChartStore'
 import { WATCHLIST } from '../lib/symbols'
 
 export function TopToolbar() {
-  const { symbol, interval, replayMode, setSymbol, setInterval, startReplaySelect, exitReplay } = useChartStore()
+  const { symbol, interval, replayMode, setSymbol, setInterval, startReplaySelect, exitReplay, resetView } =
+    useChartStore()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
 
@@ -63,6 +64,10 @@ export function TopToolbar() {
         title="Bar Replay"
       >
         ⏪ Replay
+      </button>
+
+      <button className="tb-btn" onClick={resetView} title="Đặt lại chế độ xem biểu đồ (Alt + R)">
+        ⟲ Reset view
       </button>
     </header>
   )

@@ -208,24 +208,121 @@ select {
   pointer-events: none;
 }
 
-/* ---------- Replay bar ---------- */
+/* ---------- Replay bar (floating như TradingView) ---------- */
 .replay-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 44px;
+  transform: translateX(-50%);
+  z-index: 5;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 4px;
-  height: 40px;
-  border-top: 1px solid var(--border);
-  background: var(--bg);
-  flex-shrink: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  max-width: calc(100% - 24px);
+  overflow-x: auto;
 }
 
-.replay-bar select {
+.replay-bar select,
+.replay-date input {
   height: 28px;
   padding: 0 4px;
   border: 1px solid var(--border);
   border-radius: 4px;
+  background: var(--bg);
+}
+
+.replay-date {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.replay-play {
+  min-width: 36px;
+  font-size: 15px;
+  color: #fff;
+  background: var(--accent) !important;
+}
+
+.replay-play:disabled {
+  background: var(--hover) !important;
+}
+
+.replay-time {
+  padding: 0 6px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-select-overlay {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-left: 2px solid var(--accent);
+  background: rgba(41, 98, 255, 0.12);
+}
+
+/* ---------- Scroll to realtime / context menu ---------- */
+.scroll-realtime {
+  position: absolute;
+  right: 80px;
+  bottom: 40px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
   background: var(--panel);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.scroll-realtime:hover {
+  background: var(--hover);
+}
+
+.context-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+}
+
+.context-menu {
+  position: absolute;
+  z-index: 10;
+  margin: 0;
+  padding: 4px 0;
+  min-width: 240px;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.context-menu li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.context-menu li:hover {
+  background: var(--hover);
+}
+
+.context-menu kbd {
+  font-family: inherit;
+  color: var(--text-dim);
 }
 
 /* ---------- Watchlist ---------- */

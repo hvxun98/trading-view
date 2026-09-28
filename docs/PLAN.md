@@ -58,7 +58,8 @@ nên có thể thêm nguồn mới (sàn khác, chứng khoán VN, server riêng
 - Tìm/đổi symbol (bất kỳ cặp Binance nào, gõ + Enter)
 - Realtime qua WebSocket, tự reconnect
 - Kéo sang trái → tự tải thêm lịch sử (infinite scroll)
-- **Bar Replay**: chọn nến bắt đầu → Play/Pause, Step, tốc độ 0.5x–10x
+- **Bar Replay**: chọn nến bắt đầu (click hoặc nhập ngày) → Play/Pause, Step, tốc độ 0.5x–10x, phím tắt
+- **Reset chart view** (toolbar, menu chuột phải, `Alt + R`) và nút `»` cuộn về realtime
 - Watchlist với giá & % thay đổi 24h realtime
 - Fallback dữ liệu Demo khi không kết nối được Binance
 
@@ -67,7 +68,7 @@ nên có thể thêm nguồn mới (sàn khác, chứng khoán VN, server riêng
 - Indicator overlay (MA, EMA, Bollinger) và pane riêng (RSI, MACD, Volume)
 - Thanh công cụ vẽ bên trái: trend line, horizontal line, ray, Fibonacci, rectangle, text
   (dùng Plugins/Primitives API của lightweight-charts)
-- Replay nâng cao: nhảy tới ngày cụ thể, replay trên khung nhỏ hơn, phím tắt (Shift+→)
+- Replay nâng cao: replay trên khung nhỏ hơn, lùi nến (step back)
 - Thang log / %, auto-scale, nút "scroll to realtime", đổi timezone
 - Light theme, lưu cài đặt vào localStorage
 
