@@ -119,6 +119,7 @@ export const en = {
   'dlg.lotSize': 'Lot size',
   'dlg.risk': 'Risk',
   'dlg.leverage': 'Leverage',
+  'dlg.noLimit': 'No limit',
   'dlg.entry': 'Entry price',
   'dlg.profitLevel': 'Profit level',
   'dlg.stopLevel': 'Stop level',

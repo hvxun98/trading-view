@@ -28,7 +28,7 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
   const [accountSize, setAccountSize] = useState(String(initial.accountSize))
   const [lotSize, setLotSize] = useState(String(initial.lotSize))
   const [risk, setRisk] = useState(String(initial.risk))
-  const [leverage, setLeverage] = useState(String(initial.leverage))
+  const [leverage, setLeverage] = useState(initial.leverage ? String(initial.leverage) : '')
   const [riskUnit, setRiskUnit] = useState<PositionSettings['riskUnit']>(initial.riskUnit)
   const [alwaysShowStats, setAlwaysShowStats] = useState(initial.alwaysShowStats)
   const [entry, setEntry] = useState(e0.price.toFixed(precision))
@@ -56,7 +56,7 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
     lotSize: num(lotSize),
     risk: num(risk),
     riskUnit,
-    leverage: num(leverage),
+    leverage: leverage.trim() === '' ? null : num(leverage),
     alwaysShowStats,
   }
   const points = [
@@ -68,7 +68,7 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
     settings.accountSize > 0 &&
     settings.lotSize > 0 &&
     settings.risk > 0 &&
-    settings.leverage > 0 &&
+    (settings.leverage === null || settings.leverage > 0) &&
     points.every((p) => isFinite(p.price) && p.price > 0) &&
     // Long: target > entry > stop; Short: ngược lại
     (points[1].price - entryNum) * dir > 0 &&
@@ -126,7 +126,12 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
           </div>
           <label className="form-row">
             <span>{t('dlg.leverage')}</span>
-            <input name="leverage" value={leverage} onChange={(e) => setLeverage(e.target.value)} />
+            <input
+              name="leverage"
+              value={leverage}
+              placeholder={t('dlg.noLimit')}
+              onChange={(e) => setLeverage(e.target.value)}
+            />
           </label>
           <label className="form-row">
             <span>{t('dlg.entry')}</span>

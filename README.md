@@ -24,7 +24,9 @@ npm run lint     # oxlint
 - Thước đo (Measure / `Shift + click`): chênh lệch giá, %, tick, số nến, thời gian, volume
 - Vị thế mua / bán (Long / Short Position): vùng chốt lời / cắt lỗ, kéo 4 điểm neo, giá theo tick
   - Settings (⚙ hoặc double-click): vốn, lot, rủi ro (% / USD), đòn bẩy, entry, mức chốt lời / cắt lỗ theo tick hoặc giá, Always show stats
-  - Qty = min(Rủi ro / |Entry − Stop| / Lot, Vốn × Đòn bẩy / Entry / Lot); Amount = số dư tài khoản sau khi chạm Target / Stop (như TradingView)
+  - S.Lg (Qty) = Rủi ro / |Entry − Stop| / Lot (nếu đặt đòn bẩy: tối đa Vốn × Đòn bẩy / Entry / Lot); Giá trị (Amount) = số dư tài khoản sau khi chạm Target / Stop
+  - Nhãn trên công cụ hiện khoảng cách tới entry như TradingView (`Mục tiêu: 287.46 (0.991%) 28,746, Giá trị: 1500`); giá Target / Entry / Stop được đối chiếu sang thanh giá
+- Hình đang chọn / rê chuột: nhãn giá & thời gian của các điểm neo trên 2 trục kèm dải tô phạm vi
   - Nhãn Target / Stop (kèm Amount), Open / Closed P&L theo giá thực tế (chạm entry → mở, chạm target/stop → đóng), Qty, Risk/Reward
 - Văn bản & ghi chú: Text, Note (ghim, rê chuột để xem), Callout, Comment (bong bóng chú thích); double-click để sửa, đổi màu & cỡ chữ
 - Kéo thả hình vẽ: kéo thân để di chuyển, kéo điểm neo để sửa (hình chữ nhật có 8 điểm neo)

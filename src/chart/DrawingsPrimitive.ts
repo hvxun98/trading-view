@@ -11,7 +11,7 @@ import type {
 } from 'lightweight-charts'
 import { COMMENT_TAIL, lineDash, POSITION_TYPES, RECT_HANDLES, styleOf } from '../lib/drawings'
 import { formatPrice, pricePrecision } from '../lib/intervals'
-import { formatMoney, formatQty, positionSettings, positionStats } from '../lib/position'
+import { formatAmount, formatQty, positionSettings, positionStats } from '../lib/position'
 import { theme } from '../lib/theme'
 import { translate, type TKey, type TParams } from '../i18n'
 import type { AnchorPoint, Candle, Drawing, Lang } from '../types'
@@ -70,6 +70,10 @@ export const FIB_LEVELS = [
   { level: 1, color: '#787b86' },
 ]
 
+const PROFIT_COLOR = '#089981'
+const LOSS_COLOR = '#f23645'
+const ENTRY_COLOR = '#787b86'
+const AXIS_BAND = 'rgba(41, 98, 255, 0.25)'
 const PROFIT_FILL = 'rgba(8, 153, 129, 0.2)'
 const LOSS_FILL = 'rgba(242, 54, 69, 0.2)'
 
@@ -152,6 +156,12 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   private width = 0
   private shapes: Shape[] = []
   private axisViews: ISeriesPrimitiveAxisView[] = []
+  private timeViews: ISeriesPrimitiveAxisView[] = []
+  /** Dải tô trên trục giá / trục thời gian cho hình đang chọn (như TradingView) */
+  private priceBand: { y1: number; y2: number } | null = null
+  private timeBand: { x1: number; x2: number } | null = null
+  private readonly priceAxisPanes: IPrimitivePaneView[]
+  private readonly timeAxisPanes: IPrimitivePaneView[]
   private readonly views: IPrimitivePaneView[]
   private readonly timeToX: (time: number) => number | null
   /** Nến đang hiển thị (khi replay chỉ là phần đã phát) — để tính P&L của vị thế */
@@ -162,6 +172,23 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     this.getBars = getBars
     const renderer: IPrimitivePaneRenderer = { draw: (target) => this.draw(target) }
     this.views = [{ zOrder: () => 'top', renderer: () => renderer }]
+    const band = (draw: (ctx: Ctx, w: number, h: number) => void): IPrimitivePaneRenderer => ({
+      draw: () => {},
+      drawBackground: (target) =>
+        target.useMediaCoordinateSpace(({ context, mediaSize }) => draw(context, mediaSize.width, mediaSize.height)),
+    })
+    const priceBand = band((ctx, w) => {
+      if (!this.priceBand) return
+      ctx.fillStyle = AXIS_BAND
+      ctx.fillRect(0, this.priceBand.y1, w, this.priceBand.y2 - this.priceBand.y1)
+    })
+    const timeBand = band((ctx, _w, h) => {
+      if (!this.timeBand) return
+      ctx.fillStyle = AXIS_BAND
+      ctx.fillRect(this.timeBand.x1, 0, this.timeBand.x2 - this.timeBand.x1, h)
+    })
+    this.priceAxisPanes = [{ zOrder: () => 'bottom', renderer: () => priceBand }]
+    this.timeAxisPanes = [{ zOrder: () => 'bottom', renderer: () => timeBand }]
   }
 
   attached(param: SeriesAttachedParameter<Time>) {
@@ -249,18 +276,85 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     const m = this.measure?.points.map((p) => this.toXY(p))
     this.measurePts = m && m.every((p) => p.x !== null && p.y !== null) ? (m as XY[]) : null
 
-    // Nhãn giá trên trục cho đường ngang (giống TradingView)
-    this.axisViews = shapes
+    // Nhãn giá trên trục: đường ngang luôn hiện (giống TradingView)
+    const label = (coordinate: number, text: string, backColor: string): ISeriesPrimitiveAxisView => ({
+      coordinate: () => coordinate,
+      text: () => text,
+      textColor: () => '#fff',
+      backColor: () => backColor,
+    })
+    const priceText = (price: number) => formatPrice(price, pricePrecision(price))
+    const axisViews = shapes
       .filter((s) => s.drawing.type === 'hline')
-      .map((s) => {
-        const price = s.drawing.points[0].price
-        return {
-          coordinate: () => s.pts[0].y,
-          text: () => formatPrice(price, pricePrecision(price)),
-          textColor: () => '#fff',
-          backColor: () => styleOf(s.drawing).color,
+      .map((s) => label(s.pts[0].y, priceText(s.drawing.points[0].price), styleOf(s.drawing).color))
+    const timeViews: ISeriesPrimitiveAxisView[] = []
+    this.priceBand = null
+    this.timeBand = null
+
+    // Hình đang chọn (hoặc đang rê chuột): đối chiếu giá / thời gian của các điểm neo sang 2 trục,
+    // kèm dải tô bao trọn phạm vi của hình
+    const active =
+      shapes.find((s) => !s.preview && s.drawing.id === this.selectedId) ??
+      shapes.find((s) => !s.preview && s.drawing.id === this.hoveredId)
+    if (active) {
+      const { drawing, pts } = active
+      const prices: { y: number; price: number; color: string }[] = []
+      if (POSITION_TYPES.includes(drawing.type)) {
+        // Vị thế: mục tiêu (xanh), entry (xám), dừng lỗ (đỏ)
+        const [pe, pt, ps] = drawing.points
+        prices.push(
+          { y: pts[1].y, price: pt.price, color: PROFIT_COLOR },
+          { y: pts[0].y, price: pe.price, color: ENTRY_COLOR },
+          { y: pts[2].y, price: ps.price, color: LOSS_COLOR },
+        )
+      } else if (drawing.type !== 'hline' && drawing.type !== 'vline') {
+        drawing.points.forEach((p, i) => prices.push({ y: pts[i].y, price: p.price, color: HANDLE_COLOR }))
+      }
+      for (const p of prices) axisViews.push(label(p.y, priceText(p.price), p.color))
+      if (prices.length > 1) {
+        const ys = prices.map((p) => p.y)
+        this.priceBand = { y1: Math.min(...ys), y2: Math.max(...ys) }
+      }
+
+      if (drawing.type !== 'hline') {
+        // Vị thế: chỉ 2 mốc (bắt đầu, kết thúc)
+        const times = POSITION_TYPES.includes(drawing.type)
+          ? [
+              { x: pts[0].x, time: drawing.points[0].time },
+              { x: pts[1].x, time: drawing.points[1].time },
+            ]
+          : drawing.points.map((p, i) => ({ x: pts[i].x, time: p.time }))
+        for (const tm of times) timeViews.push(label(tm.x, this.formatTime(tm.time), HANDLE_COLOR))
+        if (times.length > 1) {
+          const xs = times.map((tm) => tm.x)
+          this.timeBand = { x1: Math.min(...xs), x2: Math.max(...xs) }
         }
-      })
+      }
+    }
+    this.axisViews = axisViews
+    this.timeViews = timeViews
+  }
+
+  /** "Sat 27 Sep '26  13:00" (UTC, cùng múi giờ với trục thời gian) theo ngôn ngữ đang chọn */
+  private formatTime(time: number): string {
+    const d = new Date(time * 1000)
+    const locale = this.lang === 'vi' ? 'vi-VN' : 'en-US'
+    const day = d.toLocaleDateString(locale, { weekday: 'short', timeZone: 'UTC' })
+    const month = d.toLocaleDateString(locale, { month: 'short', timeZone: 'UTC' })
+    const yy = String(d.getUTCFullYear()).slice(2)
+    return `${day} ${d.getUTCDate()} ${month} '${yy}  ${d.toISOString().slice(11, 16)}`
+  }
+
+  timeAxisViews() {
+    return this.timeViews
+  }
+
+  priceAxisPaneViews() {
+    return this.priceAxisPanes
+  }
+
+  timeAxisPaneViews() {
+    return this.timeAxisPanes
   }
 
   paneViews() {
@@ -281,6 +375,13 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     }
     if (!hit) return null
     return { externalId: hit.id, zOrder: 'top', cursorStyle: this.cursorFor(hit) }
+  }
+
+  /** Chuột rời khỏi chart: bỏ trạng thái hover (ẩn điểm neo & nhãn trên trục của hình vừa rê qua) */
+  clearHover() {
+    if (this.hoveredId === null) return
+    this.hoveredId = null
+    this.requestUpdate?.()
   }
 
   isLocked(id: string): boolean {
@@ -509,14 +610,19 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     if (!active && !positionSettings(shape.drawing).alwaysShowStats) return
 
     const { precision } = st
-    const ticks = (d: number) => Math.round(Math.abs(d) * 10 ** precision)
-    const pct = (d: number) => ((d / pe.price) * 100).toFixed(2)
+    // Như TradingView: khoảng cách tới entry (không phải giá — giá được đối chiếu sang trục giá),
+    // % 3 chữ số thập phân, số tick có dấu phân cách hàng nghìn
+    const group = (v: number, digits: number) =>
+      v.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+    const dist = (d: number) => group(Math.abs(d), precision)
+    const ticks = (d: number) => group(Math.round(Math.abs(d) * 10 ** precision), 0)
+    const pct = (d: number) => Math.abs((d / pe.price) * 100).toFixed(3)
     const cx = left + w / 2
     const targetAbove = target.y < stop.y
     labelBox(
       ctx,
       [
-        `${this.t('pos.target')}: ${formatPrice(pt.price, precision)} (${pct(pt.price - pe.price)}%) ${ticks(pt.price - pe.price)}, ${this.t('pos.amount')}: ${formatMoney(st.targetAmount)}`,
+        `${this.t('pos.target')}: ${dist(pt.price - pe.price)} (${pct(pt.price - pe.price)}%) ${ticks(pt.price - pe.price)}, ${this.t('pos.amount')}: ${formatAmount(st.targetAmount)}`,
       ],
       cx,
       target.y,
@@ -526,7 +632,7 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     labelBox(
       ctx,
       [
-        `${this.t('pos.stop')}: ${formatPrice(ps.price, precision)} (${pct(ps.price - pe.price)}%) ${ticks(ps.price - pe.price)}, ${this.t('pos.amount')}: ${formatMoney(st.stopAmount)}`,
+        `${this.t('pos.stop')}: ${dist(ps.price - pe.price)} (${pct(ps.price - pe.price)}%) ${ticks(ps.price - pe.price)}, ${this.t('pos.amount')}: ${formatAmount(st.stopAmount)}`,
       ],
       cx,
       stop.y,
@@ -536,7 +642,7 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     const pnlLabel =
       st.status === 'waiting'
         ? this.t('pos.waiting')
-        : `${this.t(st.status === 'open' ? 'pos.openPnl' : 'pos.closedPnl')}: ${formatMoney(st.pnl)}`
+        : `${this.t(st.status === 'open' ? 'pos.openPnl' : 'pos.closedPnl')}: ${formatAmount(st.pnl)}`
     const ratio = isFinite(st.ratio) ? st.ratio.toFixed(2) : '∞'
     labelBox(
       ctx,

@@ -68,8 +68,8 @@ export interface PositionSettings {
   lotSize: number
   risk: number
   riskUnit: 'percent' | 'currency'
-  /** Đòn bẩy (1 = không đòn bẩy): giới hạn số lượng theo vốn */
-  leverage: number
+  /** Đòn bẩy: nếu có, S.Lg bị giới hạn bởi vốn × đòn bẩy / giá; null = không giới hạn */
+  leverage: number | null
   /** Luôn hiện nhãn thống kê (mặc định chỉ hiện khi rê chuột / đang chọn) */
   alwaysShowStats: boolean
 }

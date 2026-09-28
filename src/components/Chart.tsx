@@ -410,6 +410,8 @@ export function Chart() {
 
     // Crosshair: legend OHLC + vạch chọn điểm replay
     const onMove = (param: MouseEventParams<Time>) => {
+      // Chuột rời khỏi chart (lightweight-charts báo point = undefined)
+      if (!param.point) drawingsPrimitive.clearHover()
       if (replayModeRef.current === 'selecting' && param.point && param.logical !== undefined) {
         const x = chart.timeScale().logicalToCoordinate(Math.round(param.logical) as Logical)
         setSelectOverlay(
@@ -974,7 +976,10 @@ export function Chart() {
         if (drawingId) useChartStore.getState().selectDrawing(drawingId)
         setMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top, drawingId })
       }}
-      onMouseLeave={() => setSelectOverlay(null)}
+      onMouseLeave={() => {
+        setSelectOverlay(null)
+        drawingsRef.current?.clearHover()
+      }}
     >
       <div ref={containerRef} className="chart" />
       <Legend candle={shown} prevClose={shownPrev} />

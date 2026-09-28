@@ -6,7 +6,8 @@ export const DEFAULT_POSITION: PositionSettings = {
   lotSize: 1,
   risk: 25,
   riskUnit: 'percent',
-  leverage: 1,
+  // Mặc định không giới hạn theo đòn bẩy (như TradingView: S.Lg = rủi ro / khoảng cách dừng lỗ)
+  leverage: null,
   alwaysShowStats: false,
 }
 
@@ -67,7 +68,7 @@ export function positionStats(d: Drawing, bars: Candle[]): PositionStats {
   const riskPerUnit = Math.abs(entry.price - stop.price) * s.lotSize
   const riskAmount = s.riskUnit === 'percent' ? (s.accountSize * s.risk) / 100 : s.risk
   const qtyRisk = riskPerUnit > 0 ? riskAmount / riskPerUnit : Infinity
-  const qtyLeverage = entry.price > 0 ? (s.accountSize * s.leverage) / entry.price / s.lotSize : Infinity
+  const qtyLeverage = s.leverage && entry.price > 0 ? (s.accountSize * s.leverage) / entry.price / s.lotSize : Infinity
   const qty = Math.min(qtyRisk, qtyLeverage)
   const lossAmount = qty * s.lotSize * Math.abs(entry.price - stop.price)
   const profitAmount = qty * s.lotSize * Math.abs(target.price - entry.price)
@@ -116,8 +117,13 @@ export function positionStats(d: Drawing, bars: Candle[]): PositionStats {
 
 export function formatQty(qty: number): string {
   if (!isFinite(qty)) return '—'
-  const digits = qty >= 1000 ? 0 : qty >= 1 ? 3 : 4
+  const digits = qty >= 1000 ? 0 : 3
   return qty.toFixed(digits).replace(/\.?0+$/, '') || '0'
+}
+
+/** Như nhãn của TradingView: tối đa 2 chữ số thập phân, bỏ số 0 thừa, không phân cách ("1502.34", "750") */
+export function formatAmount(v: number): string {
+  return String(Math.round(v * 100) / 100)
 }
 
 export function formatMoney(v: number): string {
