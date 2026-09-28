@@ -29,8 +29,20 @@ export interface DataFeed {
   subscribeBars(symbol: string, interval: Interval, onBar: (bar: Candle) => void): () => void
 }
 
-export type DrawingTool = 'trendline' | 'ray' | 'hline' | 'vline' | 'rect' | 'fib'
-export type Tool = 'cursor' | DrawingTool
+export type DrawingTool =
+  | 'trendline'
+  | 'ray'
+  | 'hline'
+  | 'vline'
+  | 'rect'
+  | 'fib'
+  | 'long'
+  | 'short'
+  | 'text'
+  | 'note'
+  | 'callout'
+/** 'measure' là thước đo tạm thời, không lưu thành hình vẽ */
+export type Tool = 'cursor' | 'measure' | DrawingTool
 
 /** Điểm neo của hình vẽ: thời gian (giây, có thể là phần lẻ / tương lai) + giá */
 export interface AnchorPoint {
@@ -44,13 +56,19 @@ export interface DrawingStyle {
   color: string
   lineWidth: number
   lineStyle: LineStyleName
+  fontSize: number
 }
 
 export interface Drawing {
   id: string
   type: DrawingTool
-  /** 1 điểm cho hline/vline, 2 điểm cho các loại còn lại */
+  /**
+   * hline/vline/text/note: 1 điểm; long/short: [entry, target, stop] (target/stop mang thời gian
+   * mép phải); callout: [điểm được chỉ, vị trí hộp chữ]; còn lại: 2 điểm
+   */
   points: AnchorPoint[]
+  /** Nội dung cho text / note / callout */
+  text?: string
   /** Chỉ lưu phần khác mặc định; hình cũ không có style vẫn hiển thị đúng */
   style?: Partial<DrawingStyle>
   locked?: boolean

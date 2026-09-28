@@ -366,6 +366,115 @@ select {
   cursor: default;
 }
 
+/* Nhóm công cụ + menu con (flyout) như TradingView */
+.dt-group {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dt-arrow {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  width: 10px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.dt-group:hover .dt-arrow,
+.dt-arrow.open {
+  opacity: 1;
+}
+
+.dt-arrow:hover,
+.dt-arrow.open {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.dt-flyout {
+  position: fixed;
+  z-index: 20;
+  margin-left: 50px;
+  margin-top: -36px;
+  min-width: 230px;
+  padding: 4px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.dt-flyout-title {
+  padding: 6px 12px;
+  color: var(--text-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.dt-flyout-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 2px 12px 2px 8px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dt-flyout-item:hover {
+  background: var(--hover);
+}
+
+.dt-flyout-item.active {
+  color: var(--accent);
+}
+
+.dt-flyout-item span {
+  flex: 1;
+}
+
+.dt-flyout-item kbd {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Ô nhập chữ cho Text / Note / Callout */
+.text-editor {
+  position: absolute;
+  z-index: 6;
+  padding: 6px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif;
+  white-space: pre;
+}
+
+.ft-font {
+  min-width: 18px;
+  text-align: center;
+  color: var(--text);
+}
+
+.ft-fonts {
+  min-width: 70px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
 .dt-divider {
   width: 32px;
   height: 1px;

@@ -9,16 +9,32 @@ export const DRAWING_LABELS: Record<DrawingTool, string> = {
   vline: 'Vertical Line',
   rect: 'Rectangle',
   fib: 'Fib Retracement',
+  long: 'Long Position',
+  short: 'Short Position',
+  text: 'Text',
+  note: 'Note',
+  callout: 'Callout',
 }
 
+export const TEXT_TYPES: DrawingTool[] = ['text', 'note', 'callout']
+export const POSITION_TYPES: DrawingTool[] = ['long', 'short']
+export const FONT_SIZES = [10, 11, 12, 14, 16, 20, 24, 28, 32, 40]
+
+const base = { lineWidth: 1, lineStyle: 'solid' as const, fontSize: 14 }
 const DEFAULT_STYLES: Record<DrawingTool, DrawingStyle> = {
-  trendline: { color: '#2962ff', lineWidth: 2, lineStyle: 'solid' },
-  ray: { color: '#2962ff', lineWidth: 2, lineStyle: 'solid' },
-  hline: { color: '#2962ff', lineWidth: 1, lineStyle: 'solid' },
-  vline: { color: '#2962ff', lineWidth: 1, lineStyle: 'solid' },
-  rect: { color: '#9c27b0', lineWidth: 1, lineStyle: 'solid' },
+  trendline: { ...base, color: '#2962ff', lineWidth: 2 },
+  ray: { ...base, color: '#2962ff', lineWidth: 2 },
+  hline: { ...base, color: '#2962ff' },
+  vline: { ...base, color: '#2962ff' },
+  rect: { ...base, color: '#9c27b0' },
   // Fibonacci: style áp dụng cho đường chéo nối 2 điểm neo, các mức giữ màu riêng
-  fib: { color: '#787b86', lineWidth: 1, lineStyle: 'dashed' },
+  fib: { ...base, color: '#787b86', lineStyle: 'dashed' },
+  long: { ...base, color: '#787b86' },
+  short: { ...base, color: '#787b86' },
+  // Text: màu chữ; Note: màu ghim; Callout: màu nền hộp
+  text: { ...base, color: '#2962ff' },
+  note: { ...base, color: '#2962ff' },
+  callout: { ...base, color: '#2962ff' },
 }
 
 export function styleOf(d: Drawing): DrawingStyle {
@@ -60,10 +76,24 @@ export const RECT_HANDLES: [RectHandleSource, RectHandleSource][] = [
   ['b', 'm'],
 ]
 
+/** "1d 4h", "3h 15m", "45m" — như nhãn thước đo của TradingView */
+export function formatDuration(seconds: number): string {
+  const s = Math.abs(Math.round(seconds))
+  const d = Math.floor(s / 86400)
+  const h = Math.floor((s % 86400) / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const parts = [d && `${d}d`, h && `${h}h`, m && `${m}m`].filter(Boolean)
+  return parts.length ? parts.slice(0, 2).join(' ') : '0m'
+}
+
 /** Mô tả ngắn cho Object Tree */
 export function describeDrawing(d: Drawing): string {
   const [a, b] = d.points
   const time = (t: number) => new Date(t * 1000).toISOString().slice(0, 16).replace('T', ' ')
+  if (TEXT_TYPES.includes(d.type)) return d.text?.replace(/\s+/g, ' ') ?? ''
+  if (POSITION_TYPES.includes(d.type)) {
+    return `${formatPrice(a.price)} · TP ${formatPrice(b.price)} · SL ${formatPrice(d.points[2].price)}`
+  }
   switch (d.type) {
     case 'hline':
       return formatPrice(a.price)
@@ -91,6 +121,14 @@ export function translateDrawing(d: Drawing, bars: number, dPrice: number, data:
 
 /** Đặt lại một điểm neo; đường ngang chỉ đổi giá, đường dọc chỉ đổi thời gian */
 export function moveAnchor(d: Drawing, index: number, to: AnchorPoint): AnchorPoint[] {
+  if (POSITION_TYPES.includes(d.type)) {
+    // Điểm neo: 0 = entry (mép trái), 1 = target, 2 = stop, 3 = mép phải
+    const [entry, target, stop] = d.points
+    if (index === 0) return [to, target, stop]
+    if (index === 1) return [entry, { ...target, price: to.price }, stop]
+    if (index === 2) return [entry, target, { ...stop, price: to.price }]
+    return [entry, { ...target, time: to.time }, { ...stop, time: to.time }]
+  }
   if (d.type === 'rect') {
     const [xs, ys] = RECT_HANDLES[index]
     const pts = d.points.map((p) => ({ ...p }))

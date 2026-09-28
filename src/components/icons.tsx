@@ -58,6 +58,13 @@ export const CloneIcon = () => (
   </Icon>
 )
 
+export const EditIcon = () => (
+  <Icon>
+    <path d="M11.5 3.5 14.5 6.5 6.5 14.5H3.5V11.5Z" />
+    <path d="M10 5l3 3" />
+  </Icon>
+)
+
 export const UndoIcon = () => (
   <Icon>
     <path d="M6 4 3 7l3 3" />

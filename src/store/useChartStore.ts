@@ -58,6 +58,7 @@ interface ChartState {
   removeDrawing: (id: string) => void
   updateDrawing: (id: string, points: AnchorPoint[]) => void
   setDrawingStyle: (id: string, style: Partial<DrawingStyle>) => void
+  updateDrawingText: (id: string, text: string) => void
   toggleDrawingLock: (id: string) => void
   toggleDrawingHidden: (id: string) => void
   clearDrawings: () => void
@@ -177,6 +178,7 @@ export const useChartStore = create<ChartState>()(
         ),
       updateDrawing: (id, points) => set((s) => edit(s, id, (d) => ({ ...d, points }))),
       setDrawingStyle: (id, style) => set((s) => edit(s, id, (d) => ({ ...d, style: { ...d.style, ...style } }))),
+      updateDrawingText: (id, text) => set((s) => edit(s, id, (d) => ({ ...d, text }))),
       toggleDrawingLock: (id) => set((s) => edit(s, id, (d) => ({ ...d, locked: !d.locked }))),
       toggleDrawingHidden: (id) =>
         set((s) => {

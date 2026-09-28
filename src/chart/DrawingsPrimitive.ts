@@ -9,29 +9,47 @@ import type {
   SeriesType,
   Time,
 } from 'lightweight-charts'
-import { lineDash, RECT_HANDLES, styleOf } from '../lib/drawings'
+import { lineDash, POSITION_TYPES, RECT_HANDLES, styleOf } from '../lib/drawings'
 import { formatPrice, pricePrecision } from '../lib/intervals'
 import { theme } from '../lib/theme'
-import type { Drawing } from '../types'
+import type { AnchorPoint, Drawing } from '../types'
 
 type Target = Parameters<IPrimitivePaneRenderer['draw']>[0]
 type Ctx = CanvasRenderingContext2D
 
-interface XY {
+export interface XY {
   x: number
   y: number
+}
+
+export interface Box {
+  x: number
+  y: number
+  w: number
+  h: number
 }
 
 interface Shape {
   drawing: Drawing
   pts: XY[]
   preview: boolean
+  /** Khung chữ (text/note/callout) hoặc toàn vùng (long/short), tính lúc vẽ để hit-test */
+  box?: Box
+}
+
+/** Thước đo: 2 điểm + các dòng nhãn đã tính sẵn */
+export interface MeasureState {
+  points: [AnchorPoint, AnchorPoint]
+  lines: string[]
 }
 
 const HANDLE_COLOR = theme.accent
 const HIT_TOLERANCE = 6
 const HANDLE_RADIUS = 5
 const HANDLE_HIT_RADIUS = 8
+const FONT = '-apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif'
+const TEXT_PAD = 6
+const NOTE_PIN_RADIUS = 8
 
 /** Kết quả hit-test: hình nào, và điểm neo nào (null = thân hình) */
 export interface DrawingHit {
@@ -50,6 +68,9 @@ export const FIB_LEVELS = [
   { level: 1, color: '#787b86' },
 ]
 
+const PROFIT_FILL = 'rgba(8, 153, 129, 0.2)'
+const LOSS_FILL = 'rgba(242, 54, 69, 0.2)'
+
 function withAlpha(hex: string, alpha: number): string {
   const n = parseInt(hex.slice(1), 16)
   return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
@@ -63,6 +84,10 @@ function distToSegment(p: XY, a: XY, b: XY): number {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy))
 }
 
+function inBox(p: XY, b: Box | undefined, pad = 0): boolean {
+  return !!b && p.x >= b.x - pad && p.x <= b.x + b.w + pad && p.y >= b.y - pad && p.y <= b.y + b.h + pad
+}
+
 /** Kéo dài đoạn a->b ra xa (canvas sẽ tự cắt) */
 function extend(a: XY, b: XY): XY {
   const len = Math.hypot(b.x - a.x, b.y - a.y)
@@ -71,9 +96,40 @@ function extend(a: XY, b: XY): XY {
   return { x: b.x + (b.x - a.x) * k, y: b.y + (b.y - a.y) * k }
 }
 
+function roundRect(ctx: Ctx, b: Box, r: number) {
+  ctx.beginPath()
+  ctx.roundRect(b.x, b.y, b.w, b.h, r)
+}
+
+/** Hộp nhãn nhiều dòng, căn giữa theo (cx, y); `above` = đặt phía trên y */
+function labelBox(ctx: Ctx, lines: string[], cx: number, y: number, above: boolean, bg: string, fg = '#fff') {
+  ctx.font = `12px ${FONT}`
+  const lh = 16
+  const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 16
+  const h = lines.length * lh + 8
+  const box = { x: cx - w / 2, y: above ? y - h - 6 : y + 6, w, h }
+  ctx.fillStyle = bg
+  roundRect(ctx, box, 4)
+  ctx.fill()
+  ctx.fillStyle = fg
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  lines.forEach((l, i) => ctx.fillText(l, cx, box.y + 4 + lh * i + lh / 2))
+}
+
+function arrowHead(ctx: Ctx, from: XY, to: XY) {
+  const angle = Math.atan2(to.y - from.y, to.x - from.x)
+  const size = 7
+  ctx.beginPath()
+  ctx.moveTo(to.x, to.y)
+  ctx.lineTo(to.x - size * Math.cos(angle - 0.45), to.y - size * Math.sin(angle - 0.45))
+  ctx.moveTo(to.x, to.y)
+  ctx.lineTo(to.x - size * Math.cos(angle + 0.45), to.y - size * Math.sin(angle + 0.45))
+  ctx.stroke()
+}
+
 /**
- * Vẽ toàn bộ hình vẽ (trend line, ray, đường ngang/dọc, hình chữ nhật, Fibonacci)
- * lên pane chính, dùng Primitives API của lightweight-charts.
+ * Vẽ toàn bộ hình vẽ + thước đo lên pane chính, dùng Primitives API của lightweight-charts.
  */
 export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   private series: ISeriesApi<SeriesType, Time> | null = null
@@ -82,10 +138,14 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   private preview: Drawing | null = null
   private selectedId: string | null = null
   private hoveredId: string | null = null
+  /** Hình đang sửa chữ (ẩn chữ trên canvas vì ô nhập nằm đè lên) */
+  private editingId: string | null = null
   private lockAll = false
   private hideAll = false
   /** Bản nháp của hình đang được kéo (chưa ghi vào store) */
   private draft: Drawing | null = null
+  private measure: MeasureState | null = null
+  private measurePts: XY[] | null = null
   private width = 0
   private shapes: Shape[] = []
   private axisViews: ISeriesPrimitiveAxisView[] = []
@@ -128,17 +188,27 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     this.requestUpdate?.()
   }
 
+  setMeasure(measure: MeasureState | null) {
+    this.measure = measure
+    this.requestUpdate?.()
+  }
+
+  setEditing(id: string | null) {
+    this.editingId = id
+    this.requestUpdate?.()
+  }
+
   /** Gọi khi dữ liệu nến thay đổi (toạ độ thời gian có thể dịch chuyển) */
   refresh() {
     this.requestUpdate?.()
   }
 
-  updateAllViews() {
-    const series = this.series
-    if (!series) return
-    const toXY = (d: Drawing) =>
-      d.points.map((p) => ({ x: this.timeToX(p.time), y: series.priceToCoordinate(p.price) }))
+  private toXY(p: AnchorPoint): { x: number | null; y: number | null } {
+    return { x: this.timeToX(p.time), y: this.series?.priceToCoordinate(p.price) ?? null }
+  }
 
+  updateAllViews() {
+    if (!this.series) return
     const shapes: Shape[] = []
     const draft = this.draft
     const current = (draft ? this.drawings.map((d) => (d.id === draft.id ? draft : d)) : this.drawings).filter(
@@ -146,13 +216,22 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     )
     const all = this.preview ? [...current, this.preview] : current
     for (const d of all) {
-      const pts = toXY(d)
+      const pts = d.points.map((p) => this.toXY(p))
       // hline không cần x, vline không cần y
       const ok = pts.every((p) => (d.type === 'hline' || p.x !== null) && (d.type === 'vline' || p.y !== null))
       if (!ok) continue
-      shapes.push({ drawing: d, pts: pts.map((p) => ({ x: p.x ?? 0, y: p.y ?? 0 })), preview: d === this.preview })
+      const old = this.shapes.find((s) => s.drawing.id === d.id)
+      shapes.push({
+        drawing: d,
+        pts: pts.map((p) => ({ x: p.x ?? 0, y: p.y ?? 0 })),
+        preview: d === this.preview,
+        box: old?.box,
+      })
     }
     this.shapes = shapes
+
+    const m = this.measure?.points.map((p) => this.toXY(p))
+    this.measurePts = m && m.every((p) => p.x !== null && p.y !== null) ? (m as XY[]) : null
 
     // Nhãn giá trên trục cho đường ngang (giống TradingView)
     this.axisViews = shapes
@@ -196,12 +275,14 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     if (this.isLocked(hit.id)) return 'pointer'
     if (hit.anchor === null) return 'move'
     const shape = this.shapes.find((s) => s.drawing.id === hit.id)
-    if (shape?.drawing.type !== 'rect') return 'pointer'
+    const type = shape?.drawing.type
+    if (type && POSITION_TYPES.includes(type)) return hit.anchor === 3 ? 'ew-resize' : 'ns-resize'
+    if (type !== 'rect') return 'pointer'
     // Hình chữ nhật: mũi tên resize theo vị trí điểm neo, như TradingView
     const [xs, ys] = RECT_HANDLES[hit.anchor]
     if (xs === 'm') return 'ns-resize'
     if (ys === 'm') return 'ew-resize'
-    const [a, b] = shape.pts
+    const [a, b] = shape!.pts
     const dx = xs === 'a' ? a.x - b.x : b.x - a.x
     const dy = ys === 'a' ? a.y - b.y : b.y - a.y
     return dx * dy > 0 ? 'nwse-resize' : 'nesw-resize'
@@ -211,15 +292,33 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     return this.hitDetail(p)?.id ?? null
   }
 
-  /** Vị trí vẽ các điểm neo (đường ngang có 1 điểm neo ở giữa màn hình) */
+  /** Khung chữ đã vẽ (toạ độ pane) — dùng để đặt ô nhập khi sửa chữ */
+  textBox(id: string): Box | null {
+    return this.shapes.find((s) => s.drawing.id === id)?.box ?? null
+  }
+
+  /** Vị trí vẽ các điểm neo */
   private handlePoints({ drawing, pts }: Shape): XY[] {
-    if (drawing.type === 'hline') return [{ x: this.width / 2, y: pts[0].y }]
-    if (drawing.type === 'rect') {
-      const [a, b] = pts
-      const pick = (src: string, va: number, vb: number) => (src === 'a' ? va : src === 'b' ? vb : (va + vb) / 2)
-      return RECT_HANDLES.map(([xs, ys]) => ({ x: pick(xs, a.x, b.x), y: pick(ys, a.y, b.y) }))
+    switch (drawing.type) {
+      case 'hline':
+        return [{ x: this.width / 2, y: pts[0].y }]
+      case 'text':
+      case 'note':
+        // Text/Note: kéo thân để di chuyển, không có điểm neo riêng
+        return []
+      case 'long':
+      case 'short': {
+        const [entry, target, stop] = pts
+        return [entry, { x: entry.x, y: target.y }, { x: entry.x, y: stop.y }, { x: target.x, y: entry.y }]
+      }
+      case 'rect': {
+        const [a, b] = pts
+        const pick = (src: string, va: number, vb: number) => (src === 'a' ? va : src === 'b' ? vb : (va + vb) / 2)
+        return RECT_HANDLES.map(([xs, ys]) => ({ x: pick(xs, a.x, b.x), y: pick(ys, a.y, b.y) }))
+      }
+      default:
+        return pts
     }
-    return pts
   }
 
   hitDetail(p: XY): DrawingHit | null {
@@ -232,50 +331,50 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
 
     for (let i = this.shapes.length - 1; i >= 0; i--) {
       const shape = this.shapes[i]
-      const { drawing, pts, preview } = shape
+      const { drawing, pts, preview, box } = shape
       if (preview) continue
       const idx = this.handlePoints(shape).findIndex((h) => Math.hypot(h.x - p.x, h.y - p.y) <= HANDLE_HIT_RADIUS)
       if (idx >= 0) return { id: drawing.id, anchor: idx }
 
       const [a, b] = pts
-      let d = Infinity
+      let hit = false
       switch (drawing.type) {
         case 'trendline':
-          d = distToSegment(p, a, b)
+          hit = distToSegment(p, a, b) <= HIT_TOLERANCE
           break
         case 'ray':
-          d = distToSegment(p, a, extend(a, b))
+          hit = distToSegment(p, a, extend(a, b)) <= HIT_TOLERANCE
           break
         case 'hline':
-          d = Math.abs(p.y - a.y)
+          hit = Math.abs(p.y - a.y) <= HIT_TOLERANCE
           break
         case 'vline':
-          d = Math.abs(p.x - a.x)
+          hit = Math.abs(p.x - a.x) <= HIT_TOLERANCE
           break
         case 'rect':
-        case 'fib': {
-          const inX = p.x >= Math.min(a.x, b.x) && p.x <= Math.max(a.x, b.x)
-          const inY = p.y >= Math.min(a.y, b.y) && p.y <= Math.max(a.y, b.y)
-          if (inX && inY) d = 0
+        case 'fib':
+          hit = inBox(p, {
+            x: Math.min(a.x, b.x),
+            y: Math.min(a.y, b.y),
+            w: Math.abs(b.x - a.x),
+            h: Math.abs(b.y - a.y),
+          })
           break
-        }
+        case 'long':
+        case 'short':
+        case 'text':
+          hit = inBox(p, box, 2)
+          break
+        case 'note':
+          hit = Math.hypot(p.x - a.x, p.y - (a.y - NOTE_PIN_RADIUS)) <= NOTE_PIN_RADIUS + 3 || inBox(p, box)
+          break
+        case 'callout':
+          hit = inBox(p, box) || distToSegment(p, a, b) <= HIT_TOLERANCE
+          break
       }
-      if (d <= HIT_TOLERANCE) return { id: drawing.id, anchor: null }
+      if (hit) return { id: drawing.id, anchor: null }
     }
     return null
-  }
-
-  /** Khung bao (toạ độ pane) của một hình, để đặt thanh công cụ nổi */
-  bounds(id: string): { left: number; right: number; top: number; bottom: number } | null {
-    const shape = this.shapes.find((s) => s.drawing.id === id)
-    if (!shape) return null
-    const pts = this.handlePoints(shape)
-    return {
-      left: Math.min(...pts.map((p) => p.x)),
-      right: Math.max(...pts.map((p) => p.x)),
-      top: Math.min(...pts.map((p) => p.y)),
-      bottom: Math.max(...pts.map((p) => p.y)),
-    }
   }
 
   private draw(target: Target) {
@@ -283,15 +382,26 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
       this.width = mediaSize.width
       for (const shape of this.shapes) {
         const id = shape.drawing.id
+        const active = shape.preview || id === this.selectedId || id === this.hoveredId
         ctx.save()
-        this.drawShape(ctx, shape, mediaSize.width, mediaSize.height)
-        if (shape.preview || id === this.selectedId || id === this.hoveredId) this.drawHandles(ctx, shape)
+        this.drawShape(ctx, shape, mediaSize.width, mediaSize.height, active)
+        ctx.restore()
+        if (active) {
+          ctx.save()
+          this.drawHandles(ctx, shape)
+          ctx.restore()
+        }
+      }
+      if (this.measure && this.measurePts) {
+        ctx.save()
+        this.drawMeasure(ctx, this.measurePts, this.measure.lines)
         ctx.restore()
       }
     })
   }
 
-  private drawShape(ctx: Ctx, { drawing, pts }: Shape, width: number, height: number) {
+  private drawShape(ctx: Ctx, shape: Shape, width: number, height: number, active: boolean) {
+    const { drawing, pts } = shape
     const [a, b] = pts
     const style = styleOf(drawing)
     ctx.lineWidth = style.lineWidth
@@ -325,7 +435,179 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
       case 'fib':
         this.drawFib(ctx, drawing, a, b)
         break
+      case 'long':
+      case 'short':
+        this.drawPosition(ctx, shape, active)
+        break
+      case 'text':
+      case 'note':
+      case 'callout':
+        this.drawText(ctx, shape, style.color, style.fontSize, active)
+        break
     }
+  }
+
+  /** Vị thế mua/bán: vùng chốt lời (xanh) + vùng cắt lỗ (đỏ) + nhãn như TradingView */
+  private drawPosition(ctx: Ctx, shape: Shape, active: boolean) {
+    const [entry, target, stop] = shape.pts
+    const [pe, pt, ps] = shape.drawing.points
+    const left = Math.min(entry.x, target.x)
+    const right = Math.max(entry.x, target.x)
+    const w = right - left
+
+    ctx.setLineDash([])
+    ctx.fillStyle = PROFIT_FILL
+    ctx.fillRect(left, Math.min(entry.y, target.y), w, Math.abs(target.y - entry.y))
+    ctx.fillStyle = LOSS_FILL
+    ctx.fillRect(left, Math.min(entry.y, stop.y), w, Math.abs(stop.y - entry.y))
+    ctx.strokeStyle = '#787b86'
+    ctx.lineWidth = 1
+    this.line(ctx, { x: left, y: entry.y }, { x: right, y: entry.y })
+
+    const top = Math.min(target.y, stop.y)
+    const bottom = Math.max(target.y, stop.y)
+    shape.box = { x: left, y: top, w, h: bottom - top }
+    if (!active) return
+
+    const precision = pricePrecision(pe.price)
+    const ticks = (d: number) => Math.round(Math.abs(d) * 10 ** precision)
+    const pct = (d: number) => ((d / pe.price) * 100).toFixed(2)
+    const reward = Math.abs(pt.price - pe.price)
+    const risk = Math.abs(ps.price - pe.price)
+    const cx = left + w / 2
+    const targetAbove = target.y < stop.y
+    labelBox(
+      ctx,
+      [`Target: ${formatPrice(pt.price, precision)} (${pct(pt.price - pe.price)}%) ${ticks(pt.price - pe.price)}`],
+      cx,
+      target.y,
+      targetAbove,
+      '#089981',
+    )
+    labelBox(
+      ctx,
+      [`Stop: ${formatPrice(ps.price, precision)} (${pct(ps.price - pe.price)}%) ${ticks(ps.price - pe.price)}`],
+      cx,
+      stop.y,
+      !targetAbove,
+      '#f23645',
+    )
+    const ratio = risk === 0 ? '∞' : (reward / risk).toFixed(2)
+    labelBox(
+      ctx,
+      [`Entry: ${formatPrice(pe.price, precision)}`, `Risk/Reward Ratio: ${ratio}`],
+      cx,
+      entry.y,
+      !targetAbove,
+      '#5d606b',
+    )
+  }
+
+  /** Text / Note / Callout */
+  private drawText(ctx: Ctx, shape: Shape, color: string, fontSize: number, active: boolean) {
+    const { drawing, pts } = shape
+    const editing = drawing.id === this.editingId
+    const lines = (drawing.text ?? '').split('\n')
+    ctx.font = `${fontSize}px ${FONT}`
+    ctx.textBaseline = 'top'
+    ctx.textAlign = 'left'
+    const lh = Math.round(fontSize * 1.3)
+    const textW = Math.max(8, ...lines.map((l) => ctx.measureText(l).width))
+    const textH = lines.length * lh
+    const [a, b] = pts
+
+    if (drawing.type === 'text') {
+      const box = { x: a.x, y: a.y, w: textW + TEXT_PAD * 2, h: textH + TEXT_PAD * 2 }
+      shape.box = box
+      if (!editing) {
+        ctx.fillStyle = color
+        lines.forEach((l, i) => ctx.fillText(l, box.x + TEXT_PAD, box.y + TEXT_PAD + i * lh))
+      }
+      if (active && !shape.preview) {
+        ctx.setLineDash([3, 3])
+        ctx.strokeStyle = HANDLE_COLOR
+        ctx.lineWidth = 1
+        ctx.strokeRect(box.x, box.y, box.w, box.h)
+      }
+      return
+    }
+
+    if (drawing.type === 'note') {
+      // Ghim; nội dung chỉ hiện khi rê chuột / đang chọn (như Note của TradingView)
+      const pin = { x: a.x, y: a.y - NOTE_PIN_RADIUS }
+      ctx.setLineDash([])
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.arc(pin.x, pin.y, NOTE_PIN_RADIUS, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.beginPath()
+      ctx.moveTo(pin.x - 4, pin.y + 5)
+      ctx.lineTo(a.x, a.y + 4)
+      ctx.lineTo(pin.x + 4, pin.y + 5)
+      ctx.fill()
+      ctx.fillStyle = '#fff'
+      ctx.beginPath()
+      ctx.arc(pin.x, pin.y, 3, 0, Math.PI * 2)
+      ctx.fill()
+      const box = {
+        x: a.x - 12,
+        y: pin.y - NOTE_PIN_RADIUS - 8 - textH - TEXT_PAD * 2,
+        w: textW + TEXT_PAD * 2,
+        h: textH + TEXT_PAD * 2,
+      }
+      if (active || editing) {
+        shape.box = box
+        if (!editing) {
+          ctx.fillStyle = theme.panel
+          ctx.strokeStyle = color
+          ctx.lineWidth = 1
+          roundRect(ctx, box, 4)
+          ctx.fill()
+          ctx.stroke()
+          ctx.fillStyle = theme.text
+          lines.forEach((l, i) => ctx.fillText(l, box.x + TEXT_PAD, box.y + TEXT_PAD + i * lh))
+        }
+      } else {
+        shape.box = undefined
+      }
+      return
+    }
+
+    // Callout: hộp nền màu tại điểm 2, đường chỉ tới điểm 1
+    const box = { x: b.x, y: b.y, w: textW + TEXT_PAD * 2 + 4, h: textH + TEXT_PAD * 2 }
+    shape.box = box
+    ctx.setLineDash([])
+    ctx.strokeStyle = color
+    ctx.lineWidth = 1
+    this.line(ctx, a, { x: box.x + box.w / 2, y: box.y + box.h / 2 })
+    ctx.fillStyle = color
+    roundRect(ctx, box, 4)
+    ctx.fill()
+    if (!editing) {
+      ctx.fillStyle = '#fff'
+      lines.forEach((l, i) => ctx.fillText(l, box.x + TEXT_PAD + 2, box.y + TEXT_PAD + i * lh))
+    }
+  }
+
+  /** Thước đo: vùng tô + mũi tên ngang/dọc + nhãn (xanh dương nếu tăng, đỏ nếu giảm) */
+  private drawMeasure(ctx: Ctx, [a, b]: XY[], lines: string[]) {
+    const up = b.y <= a.y
+    const color = up ? '#2962ff' : '#f23645'
+    const x = Math.min(a.x, b.x)
+    const y = Math.min(a.y, b.y)
+    const w = Math.abs(b.x - a.x)
+    const h = Math.abs(b.y - a.y)
+    ctx.fillStyle = withAlpha(color, 0.2)
+    ctx.fillRect(x, y, w, h)
+    ctx.strokeStyle = color
+    ctx.lineWidth = 1
+    const midX = x + w / 2
+    const midY = y + h / 2
+    this.line(ctx, { x: midX, y: a.y }, { x: midX, y: b.y })
+    arrowHead(ctx, { x: midX, y: a.y }, { x: midX, y: b.y })
+    this.line(ctx, { x: a.x, y: midY }, { x: b.x, y: midY })
+    arrowHead(ctx, { x: a.x, y: midY }, { x: b.x, y: midY })
+    labelBox(ctx, lines, midX, up ? y : y + h, up, color)
   }
 
   /** Các mức Fibonacci giữ màu riêng; style của hình áp dụng cho đường chéo */
@@ -348,7 +630,7 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     }
 
     ctx.lineWidth = 1
-    ctx.font = '11px -apple-system, BlinkMacSystemFont, Roboto, sans-serif'
+    ctx.font = `11px ${FONT}`
     ctx.textBaseline = 'bottom'
     ctx.textAlign = 'right'
     for (const l of levels) {

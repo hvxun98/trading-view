@@ -64,6 +64,7 @@ nên có thể thêm nguồn mới (sàn khác, chứng khoán VN, server riêng
 - **Thanh công cụ vẽ** (Primitives API): trend line, ray, đường ngang/dọc, rectangle, Fibonacci retracement; chọn/xoá; lưu theo symbol
 - **Kéo thả hình vẽ** (di chuyển theo nến, sửa điểm neo), thanh công cụ nổi, menu chuột phải, **Object Tree**
 - **Style hình vẽ** (màu/độ dày/kiểu nét), **khoá/ẩn** từng hình & tất cả, **Undo/Redo**, rectangle 8 điểm neo
+- **Measure**, **Long/Short Position**, **Text / Note / Callout**; thanh công cụ trái chia nhóm có menu con
 - **RSI (14)** trong pane riêng (RMA như `ta.rsi` của TradingView), cập nhật cả khi realtime & replay
 - **Invert scale** (`Alt + I`)
 - Watchlist với giá & % thay đổi 24h realtime
@@ -72,7 +73,8 @@ nên có thể thêm nguồn mới (sàn khác, chứng khoán VN, server riêng
 ### Giai đoạn 2 — Giống TradingView hơn
 - Kiểu biểu đồ: Bars, Line, Area, Heikin Ashi, Hollow candles
 - Indicator overlay (MA, EMA, Bollinger) và pane riêng (MACD, Stoch); tuỳ chỉnh tham số indicator
-- Hình vẽ: text, magnet mode, nhớ style cuối cùng cho mỗi công cụ
+- Hình vẽ: magnet mode, nhớ style cuối cùng cho mỗi công cụ, thêm công cụ (Parallel Channel, Pitchfork, Brush, Date/Price Range)
+- Vị thế: tuỳ chỉnh vốn / rủi ro / số lượng, P&L theo giá hiện tại
 - Replay nâng cao: replay trên khung nhỏ hơn, lùi nến (step back)
 - Thang log / %, auto-scale, nút "scroll to realtime", đổi timezone
 - Light theme, lưu cài đặt vào localStorage
