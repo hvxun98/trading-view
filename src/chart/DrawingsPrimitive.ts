@@ -11,8 +11,9 @@ import type {
 } from 'lightweight-charts'
 import { COMMENT_TAIL, lineDash, POSITION_TYPES, RECT_HANDLES, styleOf } from '../lib/drawings'
 import { formatPrice, pricePrecision } from '../lib/intervals'
+import { formatMoney, formatQty, positionSettings, positionStats } from '../lib/position'
 import { theme } from '../lib/theme'
-import type { AnchorPoint, Drawing } from '../types'
+import type { AnchorPoint, Candle, Drawing } from '../types'
 
 type Target = Parameters<IPrimitivePaneRenderer['draw']>[0]
 type Ctx = CanvasRenderingContext2D
@@ -151,9 +152,12 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   private axisViews: ISeriesPrimitiveAxisView[] = []
   private readonly views: IPrimitivePaneView[]
   private readonly timeToX: (time: number) => number | null
+  /** Nến đang hiển thị (khi replay chỉ là phần đã phát) — để tính P&L của vị thế */
+  private readonly getBars: () => Candle[]
 
-  constructor(timeToX: (time: number) => number | null) {
+  constructor(timeToX: (time: number) => number | null, getBars: () => Candle[]) {
     this.timeToX = timeToX
+    this.getBars = getBars
     const renderer: IPrimitivePaneRenderer = { draw: (target) => this.draw(target) }
     this.views = [{ zOrder: () => 'top', renderer: () => renderer }]
   }
@@ -473,18 +477,35 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     const top = Math.min(target.y, stop.y)
     const bottom = Math.max(target.y, stop.y)
     shape.box = { x: left, y: top, w, h: bottom - top }
-    if (!active) return
 
-    const precision = pricePrecision(pe.price)
+    // Đường giá đã đi: từ lúc chạm entry tới điểm đóng (target/stop) hoặc giá hiện tại
+    const st = positionStats(shape.drawing, this.getBars())
+    if (st.openedAt && st.lastPoint) {
+      const from = this.toXY(st.openedAt)
+      const to = this.toXY(st.lastPoint)
+      if (from.x !== null && from.y !== null && to.x !== null && to.y !== null) {
+        const color = st.pnl >= 0 ? '#089981' : '#f23645'
+        ctx.fillStyle = withAlpha(color, 0.25)
+        ctx.fillRect(from.x, Math.min(from.y, to.y), to.x - from.x, Math.abs(to.y - from.y))
+        ctx.setLineDash([4, 3])
+        ctx.strokeStyle = color
+        this.line(ctx, from as XY, to as XY)
+        ctx.setLineDash([])
+      }
+    }
+
+    if (!active && !positionSettings(shape.drawing).alwaysShowStats) return
+
+    const { precision } = st
     const ticks = (d: number) => Math.round(Math.abs(d) * 10 ** precision)
     const pct = (d: number) => ((d / pe.price) * 100).toFixed(2)
-    const reward = Math.abs(pt.price - pe.price)
-    const risk = Math.abs(ps.price - pe.price)
     const cx = left + w / 2
     const targetAbove = target.y < stop.y
     labelBox(
       ctx,
-      [`Target: ${formatPrice(pt.price, precision)} (${pct(pt.price - pe.price)}%) ${ticks(pt.price - pe.price)}`],
+      [
+        `Target: ${formatPrice(pt.price, precision)} (${pct(pt.price - pe.price)}%) ${ticks(pt.price - pe.price)}, Amount: ${formatMoney(st.rewardAmount)}`,
+      ],
       cx,
       target.y,
       targetAbove,
@@ -492,20 +513,26 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     )
     labelBox(
       ctx,
-      [`Stop: ${formatPrice(ps.price, precision)} (${pct(ps.price - pe.price)}%) ${ticks(ps.price - pe.price)}`],
+      [
+        `Stop: ${formatPrice(ps.price, precision)} (${pct(ps.price - pe.price)}%) ${ticks(ps.price - pe.price)}, Amount: ${formatMoney(st.riskAmount)}`,
+      ],
       cx,
       stop.y,
       !targetAbove,
       '#f23645',
     )
-    const ratio = risk === 0 ? '∞' : (reward / risk).toFixed(2)
+    const pnlLabel =
+      st.status === 'waiting'
+        ? 'Waiting for entry'
+        : `${st.status === 'open' ? 'Open' : 'Closed'} P&L: ${formatMoney(st.pnl)}`
+    const ratio = isFinite(st.ratio) ? st.ratio.toFixed(2) : '∞'
     labelBox(
       ctx,
-      [`Entry: ${formatPrice(pe.price, precision)}`, `Risk/Reward Ratio: ${ratio}`],
+      [`${pnlLabel}, Qty: ${formatQty(st.qty)}`, `Risk/Reward Ratio: ${ratio}`],
       cx,
       entry.y,
       !targetAbove,
-      '#5d606b',
+      st.status === 'waiting' ? '#5d606b' : st.pnl >= 0 ? '#08705f' : '#a8323c',
     )
   }
 

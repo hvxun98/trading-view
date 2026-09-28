@@ -65,6 +65,13 @@ export const EditIcon = () => (
   </Icon>
 )
 
+export const SettingsIcon = () => (
+  <Icon>
+    <circle cx="9" cy="9" r="2.5" />
+    <path d="M9 1.8v2M9 14.2v2M1.8 9h2M14.2 9h2M3.9 3.9l1.4 1.4M12.7 12.7l1.4 1.4M3.9 14.1l1.4-1.4M12.7 5.3l1.4-1.4" />
+  </Icon>
+)
+
 export const UndoIcon = () => (
   <Icon>
     <path d="M6 4 3 7l3 3" />

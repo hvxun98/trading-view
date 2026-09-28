@@ -60,6 +60,16 @@ export interface DrawingStyle {
   fontSize: number
 }
 
+/** Tham số của Long/Short Position (hộp thoại Settings như TradingView) */
+export interface PositionSettings {
+  accountSize: number
+  lotSize: number
+  risk: number
+  riskUnit: 'percent' | 'currency'
+  /** Luôn hiện nhãn thống kê (mặc định chỉ hiện khi rê chuột / đang chọn) */
+  alwaysShowStats: boolean
+}
+
 export interface Drawing {
   id: string
   type: DrawingTool
@@ -68,8 +78,10 @@ export interface Drawing {
    * mép phải); callout: [điểm được chỉ, vị trí hộp chữ]; còn lại: 2 điểm
    */
   points: AnchorPoint[]
-  /** Nội dung cho text / note / callout */
+  /** Nội dung cho text / note / callout / comment */
   text?: string
+  /** Chỉ cho long / short */
+  position?: Partial<PositionSettings>
   /** Chỉ lưu phần khác mặc định; hình cũ không có style vẫn hiển thị đúng */
   style?: Partial<DrawingStyle>
   locked?: boolean

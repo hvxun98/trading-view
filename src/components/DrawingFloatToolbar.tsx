@@ -12,7 +12,7 @@ import {
 } from '../lib/drawings'
 import { useChartStore } from '../store/useChartStore'
 import type { Drawing, LineStyleName } from '../types'
-import { CloneIcon, EditIcon, LineSample, LockIcon, TrashIcon, UnlockIcon } from './icons'
+import { CloneIcon, EditIcon, LineSample, LockIcon, SettingsIcon, TrashIcon, UnlockIcon } from './icons'
 
 const STYLE_LABELS: Record<LineStyleName, string> = { solid: 'Line', dashed: 'Dashed line', dotted: 'Dotted line' }
 
@@ -22,6 +22,7 @@ interface Props {
   drawing: Drawing
   onClone: () => void
   onEdit: () => void
+  onSettings: () => void
 }
 
 /**
@@ -31,7 +32,7 @@ interface Props {
  * - vị thế mua/bán: chỉ khoá / nhân bản / xoá
  * Chung: khoá, nhân bản, xoá.
  */
-export function DrawingFloatToolbar({ drawing, onClone, onEdit }: Props) {
+export function DrawingFloatToolbar({ drawing, onClone, onEdit, onSettings }: Props) {
   const isText = TEXT_TYPES.includes(drawing.type)
   const isPosition = POSITION_TYPES.includes(drawing.type)
   const { setDrawingStyle, toggleDrawingLock, removeDrawing } = useChartStore()
@@ -163,7 +164,13 @@ export function DrawingFloatToolbar({ drawing, onClone, onEdit }: Props) {
         </>
       )}
 
-      {!isPosition && <div className="divider" />}
+      {isPosition && (
+        <button className="tb-btn ft-btn" title="Settings (double-click)" onClick={onSettings}>
+          <SettingsIcon />
+        </button>
+      )}
+
+      <div className="divider" />
 
       <button
         className={`tb-btn ft-btn ${drawing.locked ? 'active' : ''}`}

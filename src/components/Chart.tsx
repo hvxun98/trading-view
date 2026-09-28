@@ -18,7 +18,16 @@ import { BandPrimitive } from '../chart/BandPrimitive'
 import { DrawingsPrimitive } from '../chart/DrawingsPrimitive'
 import { binanceFeed } from '../data/binance'
 import { mockFeed } from '../data/mock'
-import { COMMENT_TAIL, formatDuration, moveAnchor, styleOf, TEXT_TYPES, translateDrawing } from '../lib/drawings'
+import {
+  COMMENT_TAIL,
+  formatDuration,
+  moveAnchor,
+  POSITION_TYPES,
+  styleOf,
+  TEXT_TYPES,
+  translateDrawing,
+} from '../lib/drawings'
+import { snapPositionPoints, tickSize } from '../lib/position'
 import { formatPrice, formatVolume, pricePrecision } from '../lib/intervals'
 import { computeRsi } from '../lib/rsi'
 import { theme } from '../lib/theme'
@@ -26,6 +35,7 @@ import { logicalToTime, timeToLogical } from '../lib/timeIndex'
 import { useChartStore } from '../store/useChartStore'
 import type { AnchorPoint, Candle, DataFeed, Drawing, DrawingTool } from '../types'
 import { DrawingFloatToolbar } from './DrawingFloatToolbar'
+import { PositionSettingsDialog } from './PositionSettingsDialog'
 import { TextEditor } from './TextEditor'
 import { Legend } from './Legend'
 
@@ -97,6 +107,8 @@ export function Chart() {
   const [rsiLast, setRsiLast] = useState<number | null>(null)
   const [rsiTop, setRsiTop] = useState<number | null>(null)
   const [editor, setEditor] = useState<EditorState | null>(null)
+  /** Vị thế đang mở hộp thoại Settings */
+  const [settingsId, setSettingsId] = useState<string | null>(null)
 
   const {
     symbol,
@@ -153,6 +165,8 @@ export function Chart() {
     candleRef.current?.update(bar)
     volumeRef.current?.update(volumeBar(bar))
     setLast(bar)
+    // P&L của vị thế thay đổi theo giá mới
+    drawingsRef.current?.refresh()
     if (rsiRef.current) {
       const point = computeRsi(data, RSI_PERIOD).at(-1)
       if (point) {
@@ -368,10 +382,13 @@ export function Chart() {
     if (import.meta.env.DEV) (window as unknown as { __chart?: IChartApi }).__chart = chart
 
     // Lớp hình vẽ: toạ độ x tính từ thời gian để không lệch khi tải thêm lịch sử
-    const drawingsPrimitive = new DrawingsPrimitive((time) => {
-      const logical = timeToLogical(time, dataRef.current)
-      return logical === null ? null : chart.timeScale().logicalToCoordinate(logical as Logical)
-    })
+    const drawingsPrimitive = new DrawingsPrimitive(
+      (time) => {
+        const logical = timeToLogical(time, dataRef.current)
+        return logical === null ? null : chart.timeScale().logicalToCoordinate(logical as Logical)
+      },
+      () => visibleData(),
+    )
     candles.attachPrimitive(drawingsPrimitive)
     drawingsRef.current = drawingsPrimitive
 
@@ -495,15 +512,21 @@ export function Chart() {
         openCreateEditor(tool, [point], x, y)
       } else if (tool === 'long' || tool === 'short') {
         const offset = candles.coordinateToPrice(y + POSITION_RISK_PX)
-        const risk = offset === null ? point.price * 0.01 : Math.abs(offset - point.price)
+        const rawRisk = offset === null ? point.price * 0.01 : Math.abs(offset - point.price)
+        // Giá theo tick, cắt lỗ đúng N tick và chốt lời đúng 2N tick -> R:R = 2 chính xác
+        const tick = tickSize(point.price)
+        const entry = snapPositionPoints([point])[0]
+        const risk = Math.max(1, Math.round(rawRisk / tick)) * tick
         const dir = tool === 'long' ? 1 : -1
         const logical = chart.timeScale().coordinateToLogical(x) ?? 0
         const end = logicalToTime(Math.round(logical) + POSITION_BARS, dataRef.current) ?? point.time
-        finish([
-          point,
-          { time: end, price: point.price + dir * 2 * risk },
-          { time: end, price: point.price - dir * risk },
-        ])
+        finish(
+          snapPositionPoints([
+            entry,
+            { time: end, price: entry.price + dir * 2 * risk },
+            { time: end, price: entry.price - dir * risk },
+          ]),
+        )
       } else if (ONE_CLICK_TOOLS.includes(tool)) finish([point])
       else if (!pendingRef.current) {
         pendingRef.current = point
@@ -523,7 +546,11 @@ export function Chart() {
       const rect = chart.panes()[0]?.getHTMLElement()?.getBoundingClientRect()
       if (!rect) return
       const id = drawingsPrimitive.hit({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-      if (id) openEditEditor(id)
+      if (!id) return
+      const store = useChartStore.getState()
+      const d = (store.drawings[store.symbol] ?? []).find((x) => x.id === id)
+      if (d?.type === 'long' || d?.type === 'short') setSettingsId(id)
+      else openEditEditor(id)
     }
     container.addEventListener('pointerdown', onPointerDown)
     container.addEventListener('click', onDomClick)
@@ -551,19 +578,18 @@ export function Chart() {
       const price = candles.coordinateToPrice(p.y)
       if (logical === null || price === null) return
       const data = dataRef.current
+      const isPosition = POSITION_TYPES.includes(drag.drawing.type)
       if (drag.anchor === null) {
-        // Di chuyển theo từng nến (giống TradingView), giá thì tự do
-        drag.points = translateDrawing(
-          drag.drawing,
-          Math.round(logical - drag.startLogical),
-          price - drag.startPrice,
-          data,
-        )
+        // Di chuyển theo từng nến (giống TradingView), giá thì tự do (vị thế: theo tick)
+        const tick = tickSize(drag.drawing.points[0].price)
+        const dPrice = isPosition ? Math.round((price - drag.startPrice) / tick) * tick : price - drag.startPrice
+        drag.points = translateDrawing(drag.drawing, Math.round(logical - drag.startLogical), dPrice, data)
       } else {
         const time = logicalToTime(Math.round(logical), data)
         if (time === null) return
         drag.points = moveAnchor(drag.drawing, drag.anchor, { time, price })
       }
+      if (isPosition) drag.points = snapPositionPoints(drag.points)
       drawingsPrimitive.setDraft({ ...drag.drawing, points: drag.points })
     }
 
@@ -911,6 +937,8 @@ export function Chart() {
     return drawingsRef.current.hit({ x: clientX - rect.left, y: clientY - rect.top })
   }
 
+  const settingsDrawing = drawings.find((d) => d.id === settingsId) ?? null
+
   const editorStyle = editor
     ? styleOf(drawings.find((d) => d.id === editor.id) ?? { id: '', type: editor.type, points: [] })
     : null
@@ -962,8 +990,11 @@ export function Chart() {
           drawing={selectedDrawing}
           onClone={() => cloneDrawing(selectedDrawing.id)}
           onEdit={() => openEditEditor(selectedDrawing.id)}
+          onSettings={() => setSettingsId(selectedDrawing.id)}
         />
       )}
+
+      {settingsDrawing && <PositionSettingsDialog drawing={settingsDrawing} onClose={() => setSettingsId(null)} />}
 
       {editor && (
         <TextEditor

@@ -74,7 +74,7 @@ nên có thể thêm nguồn mới (sàn khác, chứng khoán VN, server riêng
 - Kiểu biểu đồ: Bars, Line, Area, Heikin Ashi, Hollow candles
 - Indicator overlay (MA, EMA, Bollinger) và pane riêng (MACD, Stoch); tuỳ chỉnh tham số indicator
 - Hình vẽ: magnet mode, nhớ style cuối cùng cho mỗi công cụ, thêm công cụ (Parallel Channel, Pitchfork, Brush, Date/Price Range)
-- Vị thế: tuỳ chỉnh vốn / rủi ro / số lượng, P&L theo giá hiện tại
+- Vị thế: tab Style (màu vùng lời/lỗ), lưu settings làm mặc định cho vị thế mới
 - Replay nâng cao: replay trên khung nhỏ hơn, lùi nến (step back)
 - Thang log / %, auto-scale, nút "scroll to realtime", đổi timezone
 - Light theme, lưu cài đặt vào localStorage

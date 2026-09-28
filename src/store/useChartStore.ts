@@ -59,6 +59,8 @@ interface ChartState {
   updateDrawing: (id: string, points: AnchorPoint[]) => void
   setDrawingStyle: (id: string, style: Partial<DrawingStyle>) => void
   updateDrawingText: (id: string, text: string) => void
+  /** Sửa nhiều thuộc tính một lần (1 bước undo), vd. điểm neo + settings của vị thế */
+  updateDrawingProps: (id: string, patch: Partial<Omit<Drawing, 'id' | 'type'>>) => void
   toggleDrawingLock: (id: string) => void
   toggleDrawingHidden: (id: string) => void
   clearDrawings: () => void
@@ -179,6 +181,7 @@ export const useChartStore = create<ChartState>()(
       updateDrawing: (id, points) => set((s) => edit(s, id, (d) => ({ ...d, points }))),
       setDrawingStyle: (id, style) => set((s) => edit(s, id, (d) => ({ ...d, style: { ...d.style, ...style } }))),
       updateDrawingText: (id, text) => set((s) => edit(s, id, (d) => ({ ...d, text }))),
+      updateDrawingProps: (id, patch) => set((s) => edit(s, id, (d) => ({ ...d, ...patch }))),
       toggleDrawingLock: (id) => set((s) => edit(s, id, (d) => ({ ...d, locked: !d.locked }))),
       toggleDrawingHidden: (id) =>
         set((s) => {

@@ -22,8 +22,10 @@ npm run lint     # oxlint
 - Đổi khung / symbol như TradingView: giữ nguyên độ zoom và vị trí đang xem, không trượt, không nháy trống
 - Thanh công cụ vẽ bên trái chia nhóm có menu con (như TradingView): trend line, ray, đường ngang/dọc, hình chữ nhật, Fibonacci
 - Thước đo (Measure / `Shift + click`): chênh lệch giá, %, tick, số nến, thời gian, volume
-- Vị thế mua / bán (Long / Short Position): vùng chốt lời / cắt lỗ, nhãn Target / Stop / Risk-Reward, kéo 4 điểm neo
-- Văn bản & ghi chú: Text, Note (ghim, rê chuột để xem), Callout; double-click để sửa, đổi màu & cỡ chữ
+- Vị thế mua / bán (Long / Short Position): vùng chốt lời / cắt lỗ, kéo 4 điểm neo, giá theo tick
+  - Settings (⚙ hoặc double-click): vốn, lot, rủi ro (% / USD), entry, mức chốt lời / cắt lỗ theo tick hoặc giá, Qty tự tính, Always show stats
+  - Nhãn Target / Stop (kèm Amount), Open / Closed P&L theo giá thực tế (chạm entry → mở, chạm target/stop → đóng), Qty, Risk/Reward
+- Văn bản & ghi chú: Text, Note (ghim, rê chuột để xem), Callout, Comment (bong bóng chú thích); double-click để sửa, đổi màu & cỡ chữ
 - Kéo thả hình vẽ: kéo thân để di chuyển, kéo điểm neo để sửa (hình chữ nhật có 8 điểm neo)
 - Thanh công cụ nổi: màu (bảng màu TradingView), độ dày 1–4px, kiểu nét liền/gạch/chấm, khoá, clone, xoá; menu chuột phải trên hình
 - Khoá / ẩn từng hình hoặc tất cả hình vẽ; Undo / Redo
