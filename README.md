@@ -19,6 +19,7 @@ npm run lint     # oxlint
 
 - Nến + volume, crosshair, legend OHLC, dark theme giống TradingView
 - Khung thời gian 1m, 5m, 15m, 1H, 4H, 1D, 3D, 1W, 1M; tìm/đổi symbol, watchlist realtime
+- Đổi khung / symbol như TradingView: giữ nguyên độ zoom và vị trí đang xem, không trượt, không nháy trống
 - Thanh công cụ vẽ bên trái: trend line, ray, đường ngang/dọc, hình chữ nhật, Fibonacci
 - Kéo thả hình vẽ: kéo thân để di chuyển, kéo điểm neo để sửa (hình chữ nhật có 8 điểm neo)
 - Thanh công cụ nổi: màu (bảng màu TradingView), độ dày 1–4px, kiểu nét liền/gạch/chấm, khoá, clone, xoá; menu chuột phải trên hình

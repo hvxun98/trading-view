@@ -65,6 +65,8 @@ export function Chart() {
   const feedRef = useRef<DataFeed>(binanceFeed)
   const loadingOlderRef = useRef<Promise<boolean> | null>(null)
   const noMoreHistoryRef = useRef(false)
+  /** Đang đổi symbol/khung thời gian: dataRef vẫn là dữ liệu cũ, chưa được tải thêm lịch sử */
+  const switchingRef = useRef(false)
   /** Index nến cuối cùng đang hiển thị khi replay */
   const replayIndexRef = useRef(-1)
 
@@ -165,6 +167,7 @@ export function Chart() {
 
   /** Tải thêm 1 trang lịch sử cũ hơn. Trả về false nếu không còn dữ liệu. */
   const loadOlder = (): Promise<boolean> => {
+    if (switchingRef.current) return Promise.resolve(false)
     if (loadingOlderRef.current) return loadingOlderRef.current
     const first = dataRef.current[0]
     if (!first || noMoreHistoryRef.current) return Promise.resolve(false)
@@ -244,6 +247,8 @@ export function Chart() {
     chartRef.current = chart
     candleRef.current = candles
     volumeRef.current = volume
+    // Chỉ ở môi trường dev: cho test E2E đọc trạng thái chart
+    if (import.meta.env.DEV) (window as unknown as { __chart?: IChartApi }).__chart = chart
 
     // Lớp hình vẽ: toạ độ x tính từ thời gian để không lệch khi tải thêm lịch sử
     const drawingsPrimitive = new DrawingsPrimitive((time) => {
@@ -433,14 +438,36 @@ export function Chart() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 2. Tải lịch sử + stream realtime khi đổi symbol/khung thời gian
+  // 2. Tải lịch sử + stream realtime khi đổi symbol/khung thời gian.
+  //    Như TradingView: giữ nguyên độ zoom và vị trí đang xem, không xoá chart trong lúc tải
+  //    và không dùng scrollToRealTime() (hàm này có animation trượt 400ms gây chóng mặt).
   useEffect(() => {
     let cancelled = false
     let unsubscribe = () => {}
-    dataRef.current = []
+    const timeScale = chartRef.current?.timeScale()
+    const prevData = dataRef.current
+    // Khoảng cách (số nến) từ nến mới nhất tới mép phải; >= 0 nghĩa là đang xem realtime
+    const scrollPos = prevData.length && timeScale ? timeScale.scrollPosition() : RIGHT_OFFSET
+    // Đang xem lịch sử: nhớ thời điểm ở mép phải để giữ nguyên sau khi đổi khung
+    const range = timeScale?.getVisibleLogicalRange()
+    const anchorTime = scrollPos < 0 && range ? logicalToTime(range.to, prevData) : null
+
+    switchingRef.current = true
+    loadingOlderRef.current = null
     noMoreHistoryRef.current = false
     replayIndexRef.current = -1
-    render([])
+
+    const restoreView = () => {
+      const ts = chartRef.current?.timeScale()
+      const n = dataRef.current.length
+      if (!ts || !n) return
+      if (anchorTime === null) {
+        ts.scrollToPosition(scrollPos, false)
+        return
+      }
+      const right = timeToLogical(anchorTime, dataRef.current)
+      if (right !== null) ts.scrollToPosition(right - (n - 1), false)
+    }
 
     const load = async () => {
       let feed: DataFeed = binanceFeed
@@ -461,8 +488,19 @@ export function Chart() {
       })
 
       dataRef.current = data
+      switchingRef.current = false
       render(data)
-      chartRef.current?.timeScale().scrollToRealTime()
+      restoreView()
+
+      // Mốc đang xem cũ hơn dữ liệu vừa tải (vd. đổi sang khung nhỏ hơn): tải thêm rồi canh lại
+      if (anchorTime !== null) {
+        for (let page = 0; page < MAX_JUMP_PAGES && !cancelled; page++) {
+          const first = dataRef.current[0]
+          if (!first || first.time <= anchorTime || !(await loadOlder())) break
+        }
+        if (cancelled) return
+        restoreView()
+      }
 
       unsubscribe = feed.subscribeBars(symbol, interval, (bar) => {
         const arr = dataRef.current
@@ -552,7 +590,7 @@ export function Chart() {
       let idx = data.findIndex((c) => c.time > replayJump.time) - 1
       if (idx === -2) idx = data.length - 2 // mốc nằm sau nến cuối
       startReplayAt(idx)
-      chartRef.current?.timeScale().scrollToRealTime()
+      chartRef.current?.timeScale().scrollToPosition(RIGHT_OFFSET, false)
     })()
     return () => {
       cancelled = true
