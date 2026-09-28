@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '../i18n'
 import { useChartStore } from '../store/useChartStore'
 
 const SPEEDS = [0.5, 1, 2, 3, 5, 10]
@@ -27,13 +28,14 @@ export function ReplayBar() {
     jumpReplayTo,
   } = useChartStore()
   const [date, setDate] = useState('')
+  const t = useT()
 
   if (replayMode === 'off') return null
 
   const active = replayMode === 'active'
   const jump = () => {
-    const t = parseUtc(date)
-    if (t !== null) jumpReplayTo(t)
+    const time = parseUtc(date)
+    if (time !== null) jumpReplayTo(time)
   }
 
   return (
@@ -41,9 +43,9 @@ export function ReplayBar() {
       <button
         className={`tb-btn ${replayMode === 'selecting' ? 'active' : ''}`}
         onClick={startReplaySelect}
-        title="Chọn nến bắt đầu"
+        title={t('replay.selectBarTitle')}
       >
-        ✂ Select bar
+        ✂ {t('replay.selectBar')}
       </button>
 
       <div className="replay-date">
@@ -52,10 +54,10 @@ export function ReplayBar() {
           value={date}
           onChange={(e) => setDate(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && jump()}
-          title="Mốc thời gian (UTC)"
+          title={t('replay.dateTitle')}
         />
-        <button className="tb-btn" disabled={!date} onClick={jump} title="Nhảy tới mốc thời gian">
-          Go
+        <button className="tb-btn" disabled={!date} onClick={jump} title={t('replay.goTitle')}>
+          {t('replay.go')}
         </button>
       </div>
 
@@ -65,14 +67,14 @@ export function ReplayBar() {
         className="tb-btn replay-play"
         disabled={!active}
         onClick={togglePlay}
-        title={replayPlaying ? 'Pause (Shift + ↓)' : 'Play (Shift + ↓)'}
+        title={replayPlaying ? t('replay.pause') : t('replay.play')}
       >
         {replayPlaying ? '❚❚' : '▶'}
       </button>
-      <button className="tb-btn" disabled={!active} onClick={stepForward} title="Forward (Shift + →)">
+      <button className="tb-btn" disabled={!active} onClick={stepForward} title={t('replay.forward')}>
         ▶|
       </button>
-      <select value={replaySpeed} onChange={(e) => setReplaySpeed(+e.target.value)} title="Tốc độ">
+      <select value={replaySpeed} onChange={(e) => setReplaySpeed(+e.target.value)} title={t('replay.speed')}>
         {SPEEDS.map((s) => (
           <option key={s} value={s}>
             {s}x
@@ -84,7 +86,7 @@ export function ReplayBar() {
 
       <div className="divider" />
 
-      <button className="tb-btn" onClick={exitReplay} title="Thoát replay, về realtime">
+      <button className="tb-btn" onClick={exitReplay} title={t('replay.exit')}>
         ✕
       </button>
     </div>

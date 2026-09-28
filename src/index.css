@@ -567,6 +567,12 @@ select {
   cursor: pointer;
 }
 
+.form-note {
+  margin-top: 6px;
+  color: #ff9800;
+  font-size: 12px;
+}
+
 .form-error {
   margin-top: 8px;
   color: #f23645;
@@ -923,6 +929,24 @@ select {
 }
 
 .ft-list li.active {
+  color: var(--accent);
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.lang-btn {
+  gap: 4px;
+  font-weight: 600;
+}
+
+.lang-menu {
+  right: 8px;
+  min-width: 160px;
+}
+
+.lang-menu li.active {
   color: var(--accent);
 }
 

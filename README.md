@@ -23,7 +23,8 @@ npm run lint     # oxlint
 - Thanh công cụ vẽ bên trái chia nhóm có menu con (như TradingView): trend line, ray, đường ngang/dọc, hình chữ nhật, Fibonacci
 - Thước đo (Measure / `Shift + click`): chênh lệch giá, %, tick, số nến, thời gian, volume
 - Vị thế mua / bán (Long / Short Position): vùng chốt lời / cắt lỗ, kéo 4 điểm neo, giá theo tick
-  - Settings (⚙ hoặc double-click): vốn, lot, rủi ro (% / USD), entry, mức chốt lời / cắt lỗ theo tick hoặc giá, Qty tự tính, Always show stats
+  - Settings (⚙ hoặc double-click): vốn, lot, rủi ro (% / USD), đòn bẩy, entry, mức chốt lời / cắt lỗ theo tick hoặc giá, Always show stats
+  - Qty = min(Rủi ro / |Entry − Stop| / Lot, Vốn × Đòn bẩy / Entry / Lot); Amount = số dư tài khoản sau khi chạm Target / Stop (như TradingView)
   - Nhãn Target / Stop (kèm Amount), Open / Closed P&L theo giá thực tế (chạm entry → mở, chạm target/stop → đóng), Qty, Risk/Reward
 - Văn bản & ghi chú: Text, Note (ghim, rê chuột để xem), Callout, Comment (bong bóng chú thích); double-click để sửa, đổi màu & cỡ chữ
 - Kéo thả hình vẽ: kéo thân để di chuyển, kéo điểm neo để sửa (hình chữ nhật có 8 điểm neo)
@@ -32,6 +33,7 @@ npm run lint     # oxlint
 - Object Tree (panel phải): danh sách hình vẽ, click để chọn, ẩn / khoá / xoá từng hình hoặc xoá tất cả
 - Indicator RSI (14) trong pane riêng, vùng 30–70 như TradingView
 - Đảo ngược thang giá (Invert scale)
+- Song ngữ **English / Tiếng Việt** (nút 🌐 góc phải toolbar): áp dụng cho toàn bộ giao diện, kể cả nhãn vẽ trên chart (vị thế, thước đo) và ngày tháng trên trục thời gian; mặc định theo ngôn ngữ trình duyệt
 - Tự lưu symbol, khung thời gian, hình vẽ, indicator vào localStorage
 - Kéo sang trái để tải thêm lịch sử, nút `»` cuộn về nến mới nhất
 - Reset chart view: nút trên toolbar, chuột phải trên chart, hoặc `Alt + R`

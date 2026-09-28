@@ -6,6 +6,7 @@ export const DEFAULT_POSITION: PositionSettings = {
   lotSize: 1,
   risk: 25,
   riskUnit: 'percent',
+  leverage: 1,
   alwaysShowStats: false,
 }
 
@@ -31,8 +32,16 @@ export interface PositionStats {
   dir: 1 | -1
   precision: number
   qty: number
+  /** Số lượng bị giới hạn bởi vốn × đòn bẩy (thay vì theo mức rủi ro) */
+  limitedByLeverage: boolean
+  /** Mức rủi ro đã cấu hình (tiền) */
   riskAmount: number
-  rewardAmount: number
+  /** Số tiền lỗ nếu chạm stop / lời nếu chạm target (theo qty thực tế) */
+  lossAmount: number
+  profitAmount: number
+  /** "Amount" của TradingView: số dư tài khoản sau khi đóng lệnh ở target / stop */
+  targetAmount: number
+  stopAmount: number
   ratio: number
   status: PositionStatus
   /** Nến giá chạm entry (vị thế được mở) */
@@ -43,7 +52,11 @@ export interface PositionStats {
 }
 
 /**
- * Tính số lượng, số tiền rủi ro/lợi nhuận và P&L như Long/Short Position của TradingView.
+ * Tính số lượng, số dư sau khi đóng lệnh và P&L như Long/Short Position của TradingView:
+ * - QtyRisk = Risk / (|Entry − Stop| × Lot);  QtyLvg = AccountSize × Leverage / Entry / Lot
+ * - Qty = min(QtyRisk, QtyLvg)
+ * - Amount (target) = AccountSize + |Target − Entry| × Qty × Lot
+ * - Amount (stop)   = AccountSize − |Entry − Stop| × Qty × Lot
  * P&L: duyệt các nến từ thời điểm bắt đầu tới mép phải của vị thế — giá chạm entry thì mở,
  * sau đó chạm stop (kiểm tra trước, thận trọng) hoặc target thì đóng; còn mở thì tính theo giá đóng cửa mới nhất.
  */
@@ -53,8 +66,11 @@ export function positionStats(d: Drawing, bars: Candle[]): PositionStats {
   const dir = d.type === 'long' ? 1 : -1
   const riskPerUnit = Math.abs(entry.price - stop.price) * s.lotSize
   const riskAmount = s.riskUnit === 'percent' ? (s.accountSize * s.risk) / 100 : s.risk
-  const qty = riskPerUnit > 0 ? riskAmount / riskPerUnit : 0
-  const rewardAmount = qty * s.lotSize * Math.abs(target.price - entry.price)
+  const qtyRisk = riskPerUnit > 0 ? riskAmount / riskPerUnit : Infinity
+  const qtyLeverage = entry.price > 0 ? (s.accountSize * s.leverage) / entry.price / s.lotSize : Infinity
+  const qty = Math.min(qtyRisk, qtyLeverage)
+  const lossAmount = qty * s.lotSize * Math.abs(entry.price - stop.price)
+  const profitAmount = qty * s.lotSize * Math.abs(target.price - entry.price)
   const ratio = riskPerUnit > 0 ? Math.abs(target.price - entry.price) / Math.abs(entry.price - stop.price) : Infinity
 
   let status: PositionStatus = 'waiting'
@@ -84,8 +100,12 @@ export function positionStats(d: Drawing, bars: Candle[]): PositionStats {
     dir,
     precision: pricePrecision(entry.price),
     qty,
+    limitedByLeverage: qtyLeverage < qtyRisk,
     riskAmount,
-    rewardAmount,
+    lossAmount,
+    profitAmount,
+    targetAmount: s.accountSize + profitAmount,
+    stopAmount: s.accountSize - lossAmount,
     ratio,
     status,
     openedAt,

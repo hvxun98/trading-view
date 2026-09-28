@@ -1,5 +1,6 @@
 import { formatPrice, formatVolume, intervalLabel, pricePrecision } from '../lib/intervals'
 import { theme } from '../lib/theme'
+import { useT } from '../i18n'
 import { useChartStore } from '../store/useChartStore'
 import type { Candle } from '../types'
 
@@ -10,6 +11,7 @@ interface Props {
 
 export function Legend({ candle, prevClose }: Props) {
   const { symbol, interval, feedName } = useChartStore()
+  const t = useT()
 
   const precision = pricePrecision(candle?.close ?? 1)
   const fmt = (v: number) => formatPrice(v, precision)
@@ -28,10 +30,10 @@ export function Legend({ candle, prevClose }: Props) {
       </div>
       {candle && (
         <div className="legend-ohlc" style={{ color }}>
-          <span><i>O</i>{fmt(candle.open)}</span>
-          <span><i>H</i>{fmt(candle.high)}</span>
-          <span><i>L</i>{fmt(candle.low)}</span>
-          <span><i>C</i>{fmt(candle.close)}</span>
+          <span><i>{t('legend.o')}</i>{fmt(candle.open)}</span>
+          <span><i>{t('legend.h')}</i>{fmt(candle.high)}</span>
+          <span><i>{t('legend.l')}</i>{fmt(candle.low)}</span>
+          <span><i>{t('legend.c')}</i>{fmt(candle.close)}</span>
           {change !== null && changePct !== null && (
             <span>
               {change >= 0 ? '+' : ''}
@@ -43,7 +45,7 @@ export function Legend({ candle, prevClose }: Props) {
       )}
       {candle && (
         <div className="legend-vol">
-          <i>Vol</i> <span style={{ color }}>{formatVolume(candle.volume)}</span>
+          <i>{t('legend.vol')}</i> <span style={{ color }}>{formatVolume(candle.volume)}</span>
         </div>
       )}
     </div>

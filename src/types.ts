@@ -13,6 +13,8 @@ export type Interval = '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '3d' | '1w' | 
 
 export type ReplayMode = 'off' | 'selecting' | 'active'
 
+export type Lang = 'en' | 'vi'
+
 export interface Ticker {
   symbol: string
   last: number
@@ -66,6 +68,8 @@ export interface PositionSettings {
   lotSize: number
   risk: number
   riskUnit: 'percent' | 'currency'
+  /** Đòn bẩy (1 = không đòn bẩy): giới hạn số lượng theo vốn */
+  leverage: number
   /** Luôn hiện nhãn thống kê (mặc định chỉ hiện khi rê chuột / đang chọn) */
   alwaysShowStats: boolean
 }

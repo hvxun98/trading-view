@@ -13,7 +13,8 @@ import { COMMENT_TAIL, lineDash, POSITION_TYPES, RECT_HANDLES, styleOf } from '.
 import { formatPrice, pricePrecision } from '../lib/intervals'
 import { formatMoney, formatQty, positionSettings, positionStats } from '../lib/position'
 import { theme } from '../lib/theme'
-import type { AnchorPoint, Candle, Drawing } from '../types'
+import { translate, type TKey, type TParams } from '../i18n'
+import type { AnchorPoint, Candle, Drawing, Lang } from '../types'
 
 type Target = Parameters<IPrimitivePaneRenderer['draw']>[0]
 type Ctx = CanvasRenderingContext2D
@@ -141,6 +142,7 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   private hoveredId: string | null = null
   /** Hình đang sửa chữ (ẩn chữ trên canvas vì ô nhập nằm đè lên) */
   private editingId: string | null = null
+  private lang: Lang = 'en'
   private lockAll = false
   private hideAll = false
   /** Bản nháp của hình đang được kéo (chưa ghi vào store) */
@@ -195,6 +197,16 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   setMeasure(measure: MeasureState | null) {
     this.measure = measure
     this.requestUpdate?.()
+  }
+
+  /** Đổi ngôn ngữ nhãn vẽ trên chart (Target / Stop / P&L…) */
+  setLanguage(lang: Lang) {
+    this.lang = lang
+    this.requestUpdate?.()
+  }
+
+  private t(key: TKey, params?: TParams) {
+    return translate(this.lang, key, params)
   }
 
   setEditing(id: string | null) {
@@ -504,7 +516,7 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     labelBox(
       ctx,
       [
-        `Target: ${formatPrice(pt.price, precision)} (${pct(pt.price - pe.price)}%) ${ticks(pt.price - pe.price)}, Amount: ${formatMoney(st.rewardAmount)}`,
+        `${this.t('pos.target')}: ${formatPrice(pt.price, precision)} (${pct(pt.price - pe.price)}%) ${ticks(pt.price - pe.price)}, ${this.t('pos.amount')}: ${formatMoney(st.targetAmount)}`,
       ],
       cx,
       target.y,
@@ -514,7 +526,7 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     labelBox(
       ctx,
       [
-        `Stop: ${formatPrice(ps.price, precision)} (${pct(ps.price - pe.price)}%) ${ticks(ps.price - pe.price)}, Amount: ${formatMoney(st.riskAmount)}`,
+        `${this.t('pos.stop')}: ${formatPrice(ps.price, precision)} (${pct(ps.price - pe.price)}%) ${ticks(ps.price - pe.price)}, ${this.t('pos.amount')}: ${formatMoney(st.stopAmount)}`,
       ],
       cx,
       stop.y,
@@ -523,12 +535,12 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     )
     const pnlLabel =
       st.status === 'waiting'
-        ? 'Waiting for entry'
-        : `${st.status === 'open' ? 'Open' : 'Closed'} P&L: ${formatMoney(st.pnl)}`
+        ? this.t('pos.waiting')
+        : `${this.t(st.status === 'open' ? 'pos.openPnl' : 'pos.closedPnl')}: ${formatMoney(st.pnl)}`
     const ratio = isFinite(st.ratio) ? st.ratio.toFixed(2) : '∞'
     labelBox(
       ctx,
-      [`${pnlLabel}, Qty: ${formatQty(st.qty)}`, `Risk/Reward Ratio: ${ratio}`],
+      [`${pnlLabel}, ${this.t('pos.qty')}: ${formatQty(st.qty)}`, `${this.t('pos.rr')}: ${ratio}`],
       cx,
       entry.y,
       !targetAbove,

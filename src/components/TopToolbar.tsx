@@ -1,8 +1,12 @@
 import { useState } from 'react'
+import { useT } from '../i18n'
 import { INTERVALS } from '../lib/intervals'
 import { useChartStore } from '../store/useChartStore'
 import { WATCHLIST } from '../lib/symbols'
-import { RedoIcon, UndoIcon } from './icons'
+import type { Lang } from '../types'
+import { GlobeIcon, RedoIcon, UndoIcon } from './icons'
+
+const LANGS: Lang[] = ['en', 'vi']
 
 export function TopToolbar() {
   const {
@@ -20,7 +24,11 @@ export function TopToolbar() {
     toggleRsi,
     undo,
     redo,
+    language,
+    setLanguage,
   } = useChartStore()
+  const t = useT()
+  const [langOpen, setLangOpen] = useState(false)
   const canUndo = useChartStore((s) => s.undoStack.length > 0)
   const canRedo = useChartStore((s) => s.redoStack.length > 0)
   const [query, setQuery] = useState('')
@@ -81,14 +89,14 @@ export function TopToolbar() {
           className={`tb-btn ${indicatorsOpen ? 'active' : ''}`}
           onClick={() => setIndicatorsOpen((v) => !v)}
           onBlur={() => setTimeout(() => setIndicatorsOpen(false), 150)}
-          title="Indicators"
+          title={t('toolbar.indicators')}
         >
-          <i className="fx">ƒx</i> Indicators
+          <i className="fx">ƒx</i> {t('toolbar.indicators')}
         </button>
         {indicatorsOpen && (
           <ul className="symbol-dropdown">
             <li onMouseDown={toggleRsi}>
-              {rsiEnabled ? '✓' : '\u2003'} Relative Strength Index (RSI)
+              {rsiEnabled ? '✓' : '\u2003'} {t('indicator.rsi')}
             </li>
           </ul>
         )}
@@ -99,31 +107,62 @@ export function TopToolbar() {
       <button
         className={`tb-btn ${replayMode !== 'off' ? 'active' : ''}`}
         onClick={() => (replayMode === 'off' ? startReplaySelect() : exitReplay())}
-        title="Bar Replay"
+        title={t('toolbar.replayTitle')}
       >
-        ⏪ Replay
+        ⏪ {t('toolbar.replay')}
       </button>
 
-      <button className="tb-btn" onClick={resetView} title="Đặt lại chế độ xem biểu đồ (Alt + R)">
-        ⟲ Reset view
+      <button className="tb-btn" onClick={resetView} title={t('toolbar.resetViewTitle')}>
+        ⟲ {t('toolbar.resetView')}
       </button>
 
       <button
         className={`tb-btn ${invertScale ? 'active' : ''}`}
         onClick={toggleInvertScale}
-        title="Đảo ngược thang giá (Alt + I)"
+        title={t('toolbar.invertTitle')}
       >
-        ⇅ Invert scale
+        ⇅ {t('toolbar.invert')}
       </button>
 
       <div className="divider" />
 
-      <button className="tb-btn tb-icon" onClick={undo} disabled={!canUndo} title="Undo (Ctrl + Z)">
+      <button className="tb-btn tb-icon" onClick={undo} disabled={!canUndo} title={t('toolbar.undo')}>
         <UndoIcon />
       </button>
-      <button className="tb-btn tb-icon" onClick={redo} disabled={!canRedo} title="Redo (Ctrl + Y)">
+      <button className="tb-btn tb-icon" onClick={redo} disabled={!canRedo} title={t('toolbar.redo')}>
         <RedoIcon />
       </button>
+
+      <div className="toolbar-spacer" />
+
+      <div className="menu-anchor">
+        <button
+          className={`tb-btn tb-icon lang-btn ${langOpen ? 'active' : ''}`}
+          onClick={() => setLangOpen((v) => !v)}
+          onBlur={() => setTimeout(() => setLangOpen(false), 150)}
+          title={t('toolbar.language')}
+          data-lang={language}
+        >
+          <GlobeIcon /> {language.toUpperCase()}
+        </button>
+        {langOpen && (
+          <ul className="symbol-dropdown lang-menu">
+            {LANGS.map((l) => (
+              <li
+                key={l}
+                data-lang={l}
+                className={l === language ? 'active' : ''}
+                onMouseDown={() => {
+                  setLanguage(l)
+                  setLangOpen(false)
+                }}
+              >
+                {l === language ? '✓' : '\u2003'} {t(`lang.${l}`)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </header>
   )
 }

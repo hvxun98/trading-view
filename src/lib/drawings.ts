@@ -1,4 +1,5 @@
-import type { AnchorPoint, Candle, Drawing, DrawingStyle, DrawingTool, LineStyleName } from '../types'
+import { translate } from '../i18n'
+import type { AnchorPoint, Candle, Drawing, DrawingStyle, DrawingTool, Lang, LineStyleName } from '../types'
 import { formatPrice } from './intervals'
 import { logicalToTime, timeToLogical } from './timeIndex'
 
@@ -82,13 +83,17 @@ export const RECT_HANDLES: [RectHandleSource, RectHandleSource][] = [
 ]
 
 /** "1d 4h", "3h 15m", "45m" — như nhãn thước đo của TradingView */
-export function formatDuration(seconds: number): string {
+export function formatDuration(seconds: number, lang: Lang = 'en'): string {
   const s = Math.abs(Math.round(seconds))
   const d = Math.floor(s / 86400)
   const h = Math.floor((s % 86400) / 3600)
   const m = Math.floor((s % 3600) / 60)
-  const parts = [d && `${d}d`, h && `${h}h`, m && `${m}m`].filter(Boolean)
-  return parts.length ? parts.slice(0, 2).join(' ') : '0m'
+  const parts = [
+    d && translate(lang, 'duration.d', { n: d }),
+    h && translate(lang, 'duration.h', { n: h }),
+    m && translate(lang, 'duration.m', { n: m }),
+  ].filter(Boolean)
+  return parts.length ? parts.slice(0, 2).join(' ') : translate(lang, 'duration.m', { n: 0 })
 }
 
 /** Mô tả ngắn cho Object Tree */

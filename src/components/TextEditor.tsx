@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useT } from '../i18n'
 
 export interface TextEditorProps {
   x: number
@@ -16,6 +17,7 @@ export interface TextEditorProps {
 /** Ô nhập chữ nằm đè lên chart: Enter = xong, Shift+Enter = xuống dòng, Esc = huỷ */
 export function TextEditor({ x, y, above, initial, fontSize, color, background, onCommit, onCancel }: TextEditorProps) {
   const [value, setValue] = useState(initial)
+  const t = useT()
   const ref = useRef<HTMLTextAreaElement>(null)
   // Enter rồi blur sẽ gọi 2 lần -> chỉ nhận lần đầu
   const doneRef = useRef(false)
@@ -40,7 +42,7 @@ export function TextEditor({ x, y, above, initial, fontSize, color, background, 
       ref={ref}
       className="text-editor"
       value={value}
-      placeholder="Text"
+      placeholder={t('chart.textPlaceholder')}
       rows={Math.max(1, lines.length)}
       cols={Math.max(6, ...lines.map((l) => l.length + 1))}
       style={{

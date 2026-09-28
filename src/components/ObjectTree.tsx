@@ -1,4 +1,5 @@
-import { DRAWING_LABELS, describeDrawing } from '../lib/drawings'
+import { useT } from '../i18n'
+import { describeDrawing } from '../lib/drawings'
 import { useChartStore } from '../store/useChartStore'
 import type { Drawing } from '../types'
 import { EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from './icons'
@@ -10,17 +11,18 @@ export function ObjectTree() {
   const drawings = useChartStore((s) => s.drawings[s.symbol]) ?? NO_DRAWINGS
   const { selectedDrawingId, selectDrawing, removeDrawing, clearDrawings, toggleDrawingLock, toggleDrawingHidden } =
     useChartStore()
+  const t = useT()
 
   if (drawings.length === 0) {
-    return <div className="panel-empty">Chưa có hình vẽ nào. Chọn công cụ ở thanh bên trái để vẽ.</div>
+    return <div className="panel-empty">{t('tree.empty')}</div>
   }
 
   return (
     <div className="object-tree">
       <div className="object-tree-actions">
-        <span>{drawings.length} hình vẽ</span>
+        <span>{t('tree.count', { n: drawings.length })}</span>
         <button className="tb-btn" onClick={clearDrawings}>
-          Xoá tất cả
+          {t('tree.removeAll')}
         </button>
       </div>
       {drawings.map((d) => (
@@ -30,11 +32,11 @@ export function ObjectTree() {
           // Hình đang ẩn thì không chọn được trên chart
           onClick={() => !d.hidden && selectDrawing(d.id === selectedDrawingId ? null : d.id)}
         >
-          <span className="object-name">{DRAWING_LABELS[d.type]}</span>
+          <span className="object-name">{t(`tool.${d.type}`)}</span>
           <span className="object-desc">{describeDrawing(d)}</span>
           <button
             className={`object-btn ${d.hidden ? 'on' : ''}`}
-            title={d.hidden ? 'Hiện' : 'Ẩn'}
+            title={d.hidden ? t('tree.show') : t('tree.hide')}
             onClick={(e) => {
               e.stopPropagation()
               toggleDrawingHidden(d.id)
@@ -44,7 +46,7 @@ export function ObjectTree() {
           </button>
           <button
             className={`object-btn ${d.locked ? 'on' : ''}`}
-            title={d.locked ? 'Mở khoá' : 'Khoá'}
+            title={d.locked ? t('tree.unlock') : t('tree.lock')}
             onClick={(e) => {
               e.stopPropagation()
               toggleDrawingLock(d.id)
@@ -54,7 +56,7 @@ export function ObjectTree() {
           </button>
           <button
             className="object-btn"
-            title="Xoá hình này"
+            title={t('tree.remove')}
             onClick={(e) => {
               e.stopPropagation()
               removeDrawing(d.id)

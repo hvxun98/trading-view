@@ -72,6 +72,13 @@ export const SettingsIcon = () => (
   </Icon>
 )
 
+export const GlobeIcon = () => (
+  <Icon>
+    <circle cx="9" cy="9" r="7" />
+    <path d="M2 9h14M9 2c2 2.2 2.8 4.5 2.8 7S11 13.8 9 16c-2-2.2-2.8-4.5-2.8-7S7 4.2 9 2Z" />
+  </Icon>
+)
+
 export const UndoIcon = () => (
   <Icon>
     <path d="M6 4 3 7l3 3" />

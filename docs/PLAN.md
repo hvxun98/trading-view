@@ -64,7 +64,9 @@ nên có thể thêm nguồn mới (sàn khác, chứng khoán VN, server riêng
 - **Thanh công cụ vẽ** (Primitives API): trend line, ray, đường ngang/dọc, rectangle, Fibonacci retracement; chọn/xoá; lưu theo symbol
 - **Kéo thả hình vẽ** (di chuyển theo nến, sửa điểm neo), thanh công cụ nổi, menu chuột phải, **Object Tree**
 - **Style hình vẽ** (màu/độ dày/kiểu nét), **khoá/ẩn** từng hình & tất cả, **Undo/Redo**, rectangle 8 điểm neo
-- **Measure**, **Long/Short Position**, **Text / Note / Callout**; thanh công cụ trái chia nhóm có menu con
+- **Measure**, **Long/Short Position**, **Text / Note / Callout / Comment**; thanh công cụ trái chia nhóm có menu con
+- Settings vị thế (vốn, lot, rủi ro, đòn bẩy) + P&L theo giá thực tế
+- **Song ngữ EN / VI** (i18n có kiểm tra kiểu: thiếu bản dịch là lỗi biên dịch)
 - **RSI (14)** trong pane riêng (RMA như `ta.rsi` của TradingView), cập nhật cả khi realtime & replay
 - **Invert scale** (`Alt + I`)
 - Watchlist với giá & % thay đổi 24h realtime

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DRAWING_LABELS } from '../lib/drawings'
+import { useT } from '../i18n'
 import { pricePrecision } from '../lib/intervals'
 import { formatMoney, formatQty, positionSettings, positionStats, tickSize } from '../lib/position'
 import { useChartStore } from '../store/useChartStore'
@@ -18,6 +18,7 @@ const num = (v: string) => (v.trim() === '' ? NaN : Number(v))
  */
 export function PositionSettingsDialog({ drawing, onClose }: Props) {
   const updateDrawingProps = useChartStore((s) => s.updateDrawingProps)
+  const t = useT()
   const [e0, t0, s0] = drawing.points
   const dir = drawing.type === 'long' ? 1 : -1
   const precision = pricePrecision(e0.price)
@@ -27,6 +28,7 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
   const [accountSize, setAccountSize] = useState(String(initial.accountSize))
   const [lotSize, setLotSize] = useState(String(initial.lotSize))
   const [risk, setRisk] = useState(String(initial.risk))
+  const [leverage, setLeverage] = useState(String(initial.leverage))
   const [riskUnit, setRiskUnit] = useState<PositionSettings['riskUnit']>(initial.riskUnit)
   const [alwaysShowStats, setAlwaysShowStats] = useState(initial.alwaysShowStats)
   const [entry, setEntry] = useState(e0.price.toFixed(precision))
@@ -54,6 +56,7 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
     lotSize: num(lotSize),
     risk: num(risk),
     riskUnit,
+    leverage: num(leverage),
     alwaysShowStats,
   }
   const points = [
@@ -65,6 +68,7 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
     settings.accountSize > 0 &&
     settings.lotSize > 0 &&
     settings.risk > 0 &&
+    settings.leverage > 0 &&
     points.every((p) => isFinite(p.price) && p.price > 0) &&
     // Long: target > entry > stop; Short: ngược lại
     (points[1].price - entryNum) * dir > 0 &&
@@ -82,7 +86,7 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
       <div
         className="modal position-dialog"
         role="dialog"
-        aria-label={`${DRAWING_LABELS[drawing.type]} settings`}
+        aria-label={t(`tool.${drawing.type}`)}
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           e.stopPropagation()
@@ -91,23 +95,23 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
         }}
       >
         <div className="modal-header">
-          <span>{DRAWING_LABELS[drawing.type]}</span>
-          <button className="tb-btn" title="Đóng" onClick={onClose}>
+          <span>{t(`tool.${drawing.type}`)}</span>
+          <button className="tb-btn" title={t('dlg.close')} onClick={onClose}>
             ×
           </button>
         </div>
 
         <div className="modal-body">
           <label className="form-row">
-            <span>Account size</span>
+            <span>{t('dlg.accountSize')}</span>
             <input name="accountSize" value={accountSize} onChange={(e) => setAccountSize(e.target.value)} />
           </label>
           <label className="form-row">
-            <span>Lot size</span>
+            <span>{t('dlg.lotSize')}</span>
             <input name="lotSize" value={lotSize} onChange={(e) => setLotSize(e.target.value)} />
           </label>
           <div className="form-row">
-            <span>Risk</span>
+            <span>{t('dlg.risk')}</span>
             <div className="form-pair">
               <input name="risk" value={risk} onChange={(e) => setRisk(e.target.value)} />
               <select
@@ -121,13 +125,17 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
             </div>
           </div>
           <label className="form-row">
-            <span>Entry price</span>
+            <span>{t('dlg.leverage')}</span>
+            <input name="leverage" value={leverage} onChange={(e) => setLeverage(e.target.value)} />
+          </label>
+          <label className="form-row">
+            <span>{t('dlg.entry')}</span>
             <input name="entry" value={entry} onChange={(e) => onEntry(e.target.value)} />
           </label>
 
-          <div className="form-section">Profit level</div>
+          <div className="form-section">{t('dlg.profitLevel')}</div>
           <div className="form-row">
-            <span>Ticks / Price</span>
+            <span>{t('dlg.ticksPrice')}</span>
             <div className="form-pair">
               <input
                 name="profitTicks"
@@ -148,9 +156,9 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
             </div>
           </div>
 
-          <div className="form-section">Stop level</div>
+          <div className="form-section">{t('dlg.stopLevel')}</div>
           <div className="form-row">
-            <span>Ticks / Price</span>
+            <span>{t('dlg.ticksPrice')}</span>
             <div className="form-pair">
               <input
                 name="stopTicks"
@@ -173,42 +181,43 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
 
           <div className="form-summary">
             <div>
-              <span>Qty</span>
+              <span>{t('dlg.qty')}</span>
               <b data-field="qty">{valid ? formatQty(preview.qty) : '—'}</b>
             </div>
             <div>
-              <span>Risk amount</span>
-              <b data-field="riskAmount">{valid ? formatMoney(preview.riskAmount) : '—'}</b>
-            </div>
-            <div>
-              <span>Reward amount</span>
-              <b data-field="rewardAmount">{valid ? formatMoney(preview.rewardAmount) : '—'}</b>
-            </div>
-            <div>
-              <span>Risk/Reward Ratio</span>
+              <span>{t('dlg.rr')}</span>
               <b data-field="ratio">{valid ? preview.ratio.toFixed(2) : '—'}</b>
             </div>
+            <div>
+              <span>{t('dlg.targetAmount')}</span>
+              <b data-field="targetAmount">{valid ? formatMoney(preview.targetAmount) : '—'}</b>
+            </div>
+            <div>
+              <span>{t('dlg.stopAmount')}</span>
+              <b data-field="stopAmount">{valid ? formatMoney(preview.stopAmount) : '—'}</b>
+            </div>
           </div>
+          {valid && preview.limitedByLeverage && (
+            <div className="form-note" data-field="limited">
+              {t('dlg.limited')}
+            </div>
+          )}
 
           <label className="form-check">
             <input type="checkbox" checked={alwaysShowStats} onChange={(e) => setAlwaysShowStats(e.target.checked)} />
-            Always show stats
+            {t('dlg.alwaysShow')}
           </label>
           {!valid && (
-            <div className="form-error">
-              Giá trị không hợp lệ:{' '}
-              {drawing.type === 'long' ? 'cần Target > Entry > Stop' : 'cần Stop > Entry > Target'}, các số phải lớn hơn
-              0.
-            </div>
+            <div className="form-error">{drawing.type === 'long' ? t('dlg.errorLong') : t('dlg.errorShort')}</div>
           )}
         </div>
 
         <div className="modal-footer">
           <button className="btn" onClick={onClose}>
-            Cancel
+            {t('dlg.cancel')}
           </button>
           <button className="btn btn-primary" disabled={!valid} onClick={submit}>
-            Ok
+            {t('dlg.ok')}
           </button>
         </div>
       </div>

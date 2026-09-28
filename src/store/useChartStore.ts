@@ -1,8 +1,11 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import type { AnchorPoint, Drawing, DrawingStyle, Interval, ReplayMode, Tool } from '../types'
+import { detectLanguage } from '../i18n/detect'
+import type { AnchorPoint, Drawing, DrawingStyle, Interval, Lang, ReplayMode, Tool } from '../types'
 
 interface ChartState {
+  /** Ngôn ngữ giao diện (áp dụng cho mọi thành phần, kể cả nhãn vẽ trên chart) */
+  language: Lang
   symbol: string
   interval: Interval
   feedName: string
@@ -34,6 +37,7 @@ interface ChartState {
   undoStack: Drawing[][]
   redoStack: Drawing[][]
 
+  setLanguage: (language: Lang) => void
   setSymbol: (symbol: string) => void
   setInterval: (interval: Interval) => void
   setFeedName: (name: string) => void
@@ -108,6 +112,7 @@ const replayOff = { replayMode: 'off' as const, replayPlaying: false, replayJump
 export const useChartStore = create<ChartState>()(
   persist(
     (set) => ({
+      language: detectLanguage(),
       symbol: 'BTCUSDT',
       interval: '1h',
       feedName: 'Binance',
@@ -131,6 +136,7 @@ export const useChartStore = create<ChartState>()(
       undoStack: [],
       redoStack: [],
 
+      setLanguage: (language) => set({ language }),
       // Lịch sử undo gắn với symbol đang xem, nên đổi symbol thì xoá lịch sử
       setSymbol: (symbol) =>
         set({ symbol, selectedDrawingId: null, undoStack: [], redoStack: [], ...replayOff }),
@@ -222,6 +228,7 @@ export const useChartStore = create<ChartState>()(
       storage: createJSONStorage(() => localStorage),
       // Chỉ lưu cài đặt & hình vẽ, không lưu trạng thái replay
       partialize: (s) => ({
+        language: s.language,
         symbol: s.symbol,
         interval: s.interval,
         invertScale: s.invertScale,

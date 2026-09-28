@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   COLOR_PALETTE,
-  DRAWING_LABELS,
   FONT_SIZES,
   LINE_STYLES,
   LINE_WIDTHS,
@@ -11,10 +10,9 @@ import {
   TEXT_TYPES,
 } from '../lib/drawings'
 import { useChartStore } from '../store/useChartStore'
-import type { Drawing, LineStyleName } from '../types'
+import { useT } from '../i18n'
+import type { Drawing } from '../types'
 import { CloneIcon, EditIcon, LineSample, LockIcon, SettingsIcon, TrashIcon, UnlockIcon } from './icons'
-
-const STYLE_LABELS: Record<LineStyleName, string> = { solid: 'Line', dashed: 'Dashed line', dotted: 'Dotted line' }
 
 type Popover = 'color' | 'width' | 'style' | 'font' | null
 
@@ -36,6 +34,7 @@ export function DrawingFloatToolbar({ drawing, onClone, onEdit, onSettings }: Pr
   const isText = TEXT_TYPES.includes(drawing.type)
   const isPosition = POSITION_TYPES.includes(drawing.type)
   const { setDrawingStyle, toggleDrawingLock, removeDrawing } = useChartStore()
+  const t = useT()
   const [popover, setPopover] = useState<Popover>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const style = styleOf(drawing)
@@ -58,13 +57,13 @@ export function DrawingFloatToolbar({ drawing, onClone, onEdit, onSettings }: Pr
 
   return (
     <div className="float-toolbar" ref={rootRef} onMouseDown={(e) => e.stopPropagation()}>
-      <span className="float-toolbar-name">{DRAWING_LABELS[drawing.type]}</span>
+      <span className="float-toolbar-name">{t(`tool.${drawing.type}`)}</span>
 
       {!isPosition && (
         <div className="ft-group">
           <button
             className={`tb-btn ft-btn ${popover === 'color' ? 'active' : ''}`}
-            title="Màu"
+            title={t('ft.color')}
             onClick={() => toggle('color')}
           >
             <span className="ft-swatch" style={{ background: style.color }} />
@@ -93,7 +92,7 @@ export function DrawingFloatToolbar({ drawing, onClone, onEdit, onSettings }: Pr
         <div className="ft-group">
           <button
             className={`tb-btn ft-btn ${popover === 'font' ? 'active' : ''}`}
-            title="Cỡ chữ"
+            title={t('ft.fontSize')}
             onClick={() => toggle('font')}
           >
             <span className="ft-label ft-font">{style.fontSize}</span>
@@ -110,7 +109,7 @@ export function DrawingFloatToolbar({ drawing, onClone, onEdit, onSettings }: Pr
         </div>
       )}
       {isText && (
-        <button className="tb-btn ft-btn" title="Sửa chữ (double-click)" onClick={onEdit}>
+        <button className="tb-btn ft-btn" title={t('ft.editText')} onClick={onEdit}>
           <EditIcon />
         </button>
       )}
@@ -120,7 +119,7 @@ export function DrawingFloatToolbar({ drawing, onClone, onEdit, onSettings }: Pr
           <div className="ft-group">
             <button
               className={`tb-btn ft-btn ${popover === 'width' ? 'active' : ''}`}
-              title="Độ dày nét"
+              title={t('ft.width')}
               onClick={() => toggle('width')}
             >
               <LineSample width={style.lineWidth} dash={[]} />
@@ -141,7 +140,7 @@ export function DrawingFloatToolbar({ drawing, onClone, onEdit, onSettings }: Pr
           <div className="ft-group">
             <button
               className={`tb-btn ft-btn ${popover === 'style' ? 'active' : ''}`}
-              title="Kiểu nét"
+              title={t('ft.style')}
               onClick={() => toggle('style')}
             >
               <LineSample width={2} dash={lineDash(style.lineStyle, 2)} />
@@ -155,7 +154,7 @@ export function DrawingFloatToolbar({ drawing, onClone, onEdit, onSettings }: Pr
                     onClick={() => apply({ lineStyle: ls })}
                   >
                     <LineSample width={2} dash={lineDash(ls, 2)} />
-                    <span>{STYLE_LABELS[ls]}</span>
+                    <span>{t(`line.${ls}`)}</span>
                   </li>
                 ))}
               </ul>
@@ -165,7 +164,7 @@ export function DrawingFloatToolbar({ drawing, onClone, onEdit, onSettings }: Pr
       )}
 
       {isPosition && (
-        <button className="tb-btn ft-btn" title="Settings (double-click)" onClick={onSettings}>
+        <button className="tb-btn ft-btn" title={t('ft.settings')} onClick={onSettings}>
           <SettingsIcon />
         </button>
       )}
@@ -174,15 +173,15 @@ export function DrawingFloatToolbar({ drawing, onClone, onEdit, onSettings }: Pr
 
       <button
         className={`tb-btn ft-btn ${drawing.locked ? 'active' : ''}`}
-        title={drawing.locked ? 'Mở khoá' : 'Khoá'}
+        title={drawing.locked ? t('ft.unlock') : t('ft.lock')}
         onClick={() => toggleDrawingLock(drawing.id)}
       >
         {drawing.locked ? <LockIcon /> : <UnlockIcon />}
       </button>
-      <button className="tb-btn ft-btn" title="Clone" onClick={onClone}>
+      <button className="tb-btn ft-btn" title={t('ft.clone')} onClick={onClone}>
         <CloneIcon />
       </button>
-      <button className="tb-btn ft-btn" title="Remove (Delete)" onClick={() => removeDrawing(drawing.id)}>
+      <button className="tb-btn ft-btn" title={t('ft.remove')} onClick={() => removeDrawing(drawing.id)}>
         <TrashIcon />
       </button>
     </div>

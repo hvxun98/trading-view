@@ -33,10 +33,11 @@ import { computeRsi } from '../lib/rsi'
 import { theme } from '../lib/theme'
 import { logicalToTime, timeToLogical } from '../lib/timeIndex'
 import { useChartStore } from '../store/useChartStore'
-import type { AnchorPoint, Candle, DataFeed, Drawing, DrawingTool } from '../types'
+import type { AnchorPoint, Candle, DataFeed, Drawing, DrawingTool, Lang } from '../types'
 import { DrawingFloatToolbar } from './DrawingFloatToolbar'
 import { PositionSettingsDialog } from './PositionSettingsDialog'
 import { TextEditor } from './TextEditor'
+import { translate, useT } from '../i18n'
 import { Legend } from './Legend'
 
 const BAR_SPACING = 8
@@ -62,6 +63,8 @@ interface EditorState {
   above: boolean
 }
 const NO_DRAWINGS: Drawing[] = []
+/** Locale cho ngày tháng trên trục thời gian của lightweight-charts */
+const LOCALES: Record<Lang, string> = { en: 'en-US', vi: 'vi-VN' }
 
 const volumeBar = (c: Candle) => ({
   time: c.time,
@@ -125,7 +128,9 @@ export function Chart() {
     selectedDrawingId,
     lockAll,
     hideAll,
+    language,
   } = useChartStore()
+  const t = useT()
   const drawings = useChartStore((s) => s.drawings[s.symbol]) ?? NO_DRAWINGS
   const {
     setFeedName,
@@ -269,6 +274,7 @@ export function Chart() {
   /** Nhãn thước đo: chênh lệch giá (%, tick), số nến + thời gian, tổng volume — như TradingView */
   const measureLines = (a: AnchorPoint, b: AnchorPoint): string[] => {
     const data = dataRef.current
+    const lang = useChartStore.getState().language
     const diff = b.price - a.price
     const precision = pricePrecision(a.price)
     const sign = diff < 0 ? '−' : ''
@@ -281,8 +287,8 @@ export function Chart() {
     for (let i = i0; i <= i1; i++) volume += data[i].volume
     return [
       `${sign}${formatPrice(Math.abs(diff), precision)} (${sign}${Math.abs((diff / a.price) * 100).toFixed(2)}%) ${sign}${Math.round(Math.abs(diff) * 10 ** precision)}`,
-      `${bars} bars, ${bars < 0 ? '−' : ''}${formatDuration(b.time - a.time)}`,
-      `Vol ${formatVolume(volume)}`,
+      `${translate(lang, 'measure.bars', { n: bars })}, ${bars < 0 ? '−' : ''}${formatDuration(b.time - a.time, lang)}`,
+      `${translate(lang, 'measure.vol')} ${formatVolume(volume)}`,
     ]
   }
 
@@ -331,7 +337,7 @@ export function Chart() {
   useEffect(() => {
     const chart = createChart(containerRef.current!, {
       autoSize: true,
-      localization: { locale: 'en-US' },
+      localization: { locale: LOCALES[useChartStore.getState().language] },
       layout: {
         background: { type: ColorType.Solid, color: theme.bg },
         textColor: theme.text,
@@ -389,6 +395,7 @@ export function Chart() {
       },
       () => visibleData(),
     )
+    drawingsPrimitive.setLanguage(useChartStore.getState().language)
     candles.attachPrimitive(drawingsPrimitive)
     drawingsRef.current = drawingsPrimitive
 
@@ -816,6 +823,15 @@ export function Chart() {
     volumeRef.current?.priceScale().applyOptions({ autoScale: true })
   }, [resetViewNonce])
 
+  // Đổi ngôn ngữ: nhãn vẽ trên chart, thước đo, ngày tháng trên trục thời gian
+  useEffect(() => {
+    drawingsRef.current?.setLanguage(language)
+    chartRef.current?.applyOptions({ localization: { locale: LOCALES[language] } })
+    document.documentElement.lang = language
+    if (measureRef.current) showMeasure()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language])
+
   // 8. Đảo ngược thang giá (Invert scale)
   useEffect(() => {
     chartRef.current?.priceScale('right').applyOptions({ invertScale })
@@ -966,9 +982,9 @@ export function Chart() {
       {rsiEnabled && rsiTop !== null && (
         <div className="legend pane-legend" style={{ top: rsiTop + 6 }}>
           <div className="legend-ohlc">
-            <span className="legend-name">RSI {RSI_PERIOD} close</span>
+            <span className="legend-name">{t('indicator.rsiLegend', { period: RSI_PERIOD })}</span>
             <span style={{ color: RSI_COLOR }}>{(rsiHovered ?? rsiLast)?.toFixed(2) ?? '—'}</span>
-            <button className="legend-remove" onClick={toggleRsi} title="Xoá RSI">
+            <button className="legend-remove" onClick={toggleRsi} title={t('indicator.remove')}>
               ×
             </button>
           </div>
@@ -981,9 +997,7 @@ export function Chart() {
           style={{ left: selectOverlay.x, right: selectOverlay.right, bottom: selectOverlay.bottom }}
         />
       )}
-      {replayMode === 'selecting' && (
-        <div className="chart-hint">Click vào chart để chọn điểm bắt đầu replay (kéo sang trái để về mốc cũ)</div>
-      )}
+      {replayMode === 'selecting' && <div className="chart-hint">{t('chart.replayHint')}</div>}
 
       {selectedDrawing && replayMode !== 'selecting' && (
         <DrawingFloatToolbar
@@ -1020,7 +1034,7 @@ export function Chart() {
       {scrolledBack && (
         <button
           className="scroll-realtime"
-          title="Cuộn tới nến mới nhất"
+          title={t('chart.scrollRealtime')}
           onClick={() => chartRef.current?.timeScale().scrollToRealTime()}
         >
           »
@@ -1039,7 +1053,7 @@ export function Chart() {
                     setMenu(null)
                   }}
                 >
-                  <span>⧉ Clone</span>
+                  <span>⧉ {t('menu.clone')}</span>
                 </li>
                 <li
                   onClick={() => {
@@ -1047,7 +1061,11 @@ export function Chart() {
                     setMenu(null)
                   }}
                 >
-                  <span>{drawings.find((d) => d.id === menu.drawingId)?.locked ? '🔓 Unlock' : '🔒 Lock'}</span>
+                  <span>
+                    {drawings.find((d) => d.id === menu.drawingId)?.locked
+                      ? `🔓 ${t('menu.unlock')}`
+                      : `🔒 ${t('menu.lock')}`}
+                  </span>
                 </li>
                 <li
                   onClick={() => {
@@ -1055,7 +1073,7 @@ export function Chart() {
                     setMenu(null)
                   }}
                 >
-                  <span>🙈 Hide</span>
+                  <span>🙈 {t('menu.hide')}</span>
                 </li>
                 <li
                   onClick={() => {
@@ -1063,7 +1081,7 @@ export function Chart() {
                     setMenu(null)
                   }}
                 >
-                  <span>🗑 Remove</span>
+                  <span>🗑 {t('menu.remove')}</span>
                   <kbd>Del</kbd>
                 </li>
                 <li className="menu-divider" />
@@ -1075,7 +1093,7 @@ export function Chart() {
                 setMenu(null)
               }}
             >
-              <span>⟲ Reset chart view</span>
+              <span>⟲ {t('menu.resetView')}</span>
               <kbd>Alt + R</kbd>
             </li>
             <li
@@ -1084,7 +1102,9 @@ export function Chart() {
                 setMenu(null)
               }}
             >
-              <span>{invertScale ? '✓' : '\u2003'} Invert scale</span>
+              <span>
+                {invertScale ? '✓' : '\u2003'} {t('menu.invert')}
+              </span>
               <kbd>Alt + I</kbd>
             </li>
             <li
@@ -1094,7 +1114,7 @@ export function Chart() {
                 setMenu(null)
               }}
             >
-              <span>🗑 Remove drawings</span>
+              <span>🗑 {t('menu.removeDrawings')}</span>
             </li>
           </ul>
         </>
