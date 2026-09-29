@@ -116,6 +116,7 @@ export const en = {
   'chart.replayHint': 'Click on the chart to pick the replay start (drag left to go further back)',
   'chart.textPlaceholder': 'Text',
 
+  'replay.drag': 'Drag to move · double-click to reset position',
   'replay.selectBar': 'Select bar',
   'replay.selectBarTitle': 'Pick the start bar',
   'replay.dateTitle': 'Date (UTC)',

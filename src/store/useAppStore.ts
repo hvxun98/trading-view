@@ -21,6 +21,11 @@ interface AppState {
   layout: LayoutId
   /** Biểu đồ đang chọn: toolbar, công cụ vẽ, Object Tree, Watchlist, phím tắt áp dụng cho biểu đồ này */
   activeChart: number
+  /**
+   * Vị trí thanh replay do người dùng kéo tới, theo tỉ lệ 0..1 của khoảng trống trong vùng chart
+   * (giữ đúng chỗ khi đổi kích thước); null = mặc định giữa, sát đáy
+   */
+  replayBarPos: { x: number; y: number } | null
 
   setLanguage: (language: Lang) => void
   addToWatchlist: (symbol: string) => void
@@ -29,6 +34,7 @@ interface AppState {
   setMt5: (mt5: Mt5Config | null) => void
   setLayout: (layout: LayoutId) => void
   setActiveChart: (index: number) => void
+  setReplayBarPos: (pos: { x: number; y: number } | null) => void
 }
 
 export const APP_KEY = 'tv-clone'
@@ -69,6 +75,7 @@ export const useAppStore = create<AppState>()(
       mt5: null,
       layout: '1',
       activeChart: 0,
+      replayBarPos: null,
 
       setLanguage: (language) => set({ language }),
       addToWatchlist: (symbol) =>
@@ -79,6 +86,7 @@ export const useAppStore = create<AppState>()(
       // Bớt biểu đồ: nếu biểu đồ đang chọn bị ẩn thì chọn biểu đồ cuối còn lại
       setLayout: (layout) =>
         set((s) => ({ layout, activeChart: Math.min(s.activeChart, layoutInfo(layout).count - 1) })),
+      setReplayBarPos: (replayBarPos) => set({ replayBarPos }),
       setActiveChart: (activeChart) => set((s) => (s.activeChart === activeChart ? {} : { activeChart })),
     }),
     {
@@ -91,6 +99,7 @@ export const useAppStore = create<AppState>()(
         mt5: s.mt5,
         layout: s.layout,
         activeChart: s.activeChart,
+        replayBarPos: s.replayBarPos,
       }),
     },
   ),

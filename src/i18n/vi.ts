@@ -118,6 +118,7 @@ export const vi: Record<keyof typeof en, string> = {
   'chart.replayHint': 'Click vào chart để chọn điểm bắt đầu phát lại (kéo sang trái để về mốc cũ)',
   'chart.textPlaceholder': 'Văn bản',
 
+  'replay.drag': 'Kéo để di chuyển · nhấp đúp để về vị trí mặc định',
   'replay.selectBar': 'Chọn nến',
   'replay.selectBarTitle': 'Chọn nến bắt đầu',
   'replay.dateTitle': 'Mốc thời gian (UTC)',

@@ -83,7 +83,7 @@ Token chỉ được lưu trong localStorage của trình duyệt.
 - Tự lưu symbol, khung thời gian, hình vẽ, indicator vào localStorage
 - Kéo sang trái để tải thêm lịch sử, nút `»` cuộn về nến mới nhất
 - Reset chart view: nút trên toolbar, chuột phải trên chart, hoặc `Alt + R`
-- Bar Replay: click chọn nến (hoặc nhập ngày, tự tải lịch sử cũ), Play/Pause, Step, tốc độ 0.5x–10x
+- Bar Replay: click chọn nến (hoặc nhập ngày, tự tải lịch sử cũ), Play/Pause, Step, tốc độ 0.5x–10x; kéo tay nắm ⋮⋮ để di chuyển thanh replay (nhớ vị trí, nhấp đúp để về chỗ cũ)
 - Mất kết nối: Binance tự chuyển sang máy chủ dự phòng (`data-api.binance.vision`, `api-gcp.binance.com`); nếu vẫn lỗi thì tạm hiện Demo (legend ghi *Demo · đang kết nối lại…*) và tự thử lại, có dữ liệu thật là thay vào ngay
 
 ## Phím tắt

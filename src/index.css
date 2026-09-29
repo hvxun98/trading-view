@@ -291,6 +291,43 @@ select {
   overflow-x: auto;
 }
 
+.replay-bar.moved {
+  bottom: auto;
+  transform: none;
+}
+
+.replay-bar.dragging {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+  user-select: none;
+}
+
+/* Tay nắm kéo thanh replay (như TradingView) */
+.replay-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 28px;
+  margin-right: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-dim);
+  cursor: grab;
+  touch-action: none;
+}
+
+.replay-grip:hover,
+.replay-grip:focus-visible {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.replay-bar.dragging .replay-grip {
+  cursor: grabbing;
+}
+
 .replay-bar select,
 .replay-date input {
   height: 28px;
