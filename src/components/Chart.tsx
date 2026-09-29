@@ -216,6 +216,21 @@ export function Chart({ index }: { index: number }) {
     activateReplay()
   }
 
+  /**
+   * Thời gian -> toạ độ x. Tự nội suy giữa 2 nến: logicalToCoordinate() của lightweight-charts trả về 0 với
+   * logical lẻ (vd. vị thế vẽ ở M15 lúc 03:30 xem trên H1 nằm giữa nến 03:00 và 04:00).
+   */
+  const timeToX = (time: number): number | null => {
+    const ts = chartRef.current?.timeScale()
+    const logical = timeToLogical(time, dataRef.current)
+    if (!ts || logical === null) return null
+    const i = Math.floor(logical)
+    const x0 = ts.logicalToCoordinate(i as Logical)
+    if (x0 === null || logical === i) return x0
+    const x1 = ts.logicalToCoordinate((i + 1) as Logical)
+    return x1 === null ? null : x0 + (x1 - x0) * (logical - i)
+  }
+
   /** Toạ độ pane giá -> toạ độ trong khung chart (để đặt ô nhập chữ) */
   const paneToWrap = (x: number, y: number) => {
     const pane = chartRef.current?.panes()[0]?.getHTMLElement()?.getBoundingClientRect()
@@ -250,7 +265,7 @@ export function Chart({ index }: { index: number }) {
     if (!d || !TEXT_TYPES.includes(d.type)) return
     const box = drawingsRef.current?.textBox(id)
     const anchor = d.type === 'callout' ? d.points[1] : d.points[0]
-    const fallbackX = candleRef.current ? chartRef.current?.timeScale().timeToCoordinate(anchor.time as Time) : null
+    const fallbackX = timeToX(anchor.time)
     const fallbackY = candleRef.current?.priceToCoordinate(anchor.price)
     const px = box ? box.x : (fallbackX ?? 0)
     const above = d.type === 'note' || d.type === 'comment'
@@ -406,10 +421,7 @@ export function Chart({ index }: { index: number }) {
 
     // Lớp hình vẽ: toạ độ x tính từ thời gian để không lệch khi tải thêm lịch sử
     const drawingsPrimitive = new DrawingsPrimitive(
-      (time) => {
-        const logical = timeToLogical(time, dataRef.current)
-        return logical === null ? null : chart.timeScale().logicalToCoordinate(logical as Logical)
-      },
+      (time) => timeToX(time),
       () => visibleData(),
     )
     drawingsPrimitive.setLanguage(useAppStore.getState().language)
