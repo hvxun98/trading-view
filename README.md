@@ -15,6 +15,20 @@ npm run build    # type-check + build production
 npm run lint     # oxlint
 ```
 
+## Deploy lên Vercel
+
+Có sẵn `vercel.json` (preset Vite, output `dist`). Trên Vercel không có proxy của Vite, nên hai Vercel Function làm thay:
+
+- `api/dukascopy.ts`: `/api/dukascopy?...` → `freeserv.dukascopy.com/2.0/index.php?...` (gắn `Referer`)
+- `api/oanda.ts`: `/api/oanda/{practice,live}/v3/...` → OANDA v20 (chỉ chuyển tiếp header `Authorization`, không lưu token)
+
+Cách 1: trên vercel.com → *Add New… → Project* → import repo GitHub, nhánh production `main` (mỗi lần push `main` tự deploy).
+Cách 2: CLI
+
+```bash
+npx vercel deploy --prod --token <VERCEL_TOKEN>
+```
+
 ## Dữ liệu forex & kim loại (XAUUSD…)
 
 Mặc định lấy từ **Dukascopy Bank** (ngân hàng Thuỵ Sĩ, sàn ECN): nến spot BID cho XAU/USD, XAG/USD, XPT, XPD và các cặp forex chính,
@@ -27,7 +41,7 @@ nên đi qua proxy `/api/dukascopy` trong `vite.config.ts`. Nến cuối cập n
 2. Trong app: nút ⚙ **Nguồn dữ liệu** (góc phải toolbar) → chọn *Demo (practice)* → dán token → *Kiểm tra kết nối* → *Lưu*.
 3. OANDA không cho gọi API trực tiếp từ trình duyệt (CORS), nên request đi qua proxy của Vite
    (`/api/oanda/practice` → `api-fxpractice.oanda.com`, `/api/oanda/live` → `api-fxtrade.oanda.com`, cấu hình trong `vite.config.ts`).
-   Proxy có sẵn khi chạy `npm run dev` hoặc `npm run preview`; nếu deploy lên hosting tĩnh cần một reverse proxy tương tự.
+   Proxy có sẵn khi chạy `npm run dev` hoặc `npm run preview`; trên Vercel do Vercel Functions trong `api/` đảm nhận.
 
 Token chỉ được lưu trong localStorage của trình duyệt.
 
