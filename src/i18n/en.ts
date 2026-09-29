@@ -22,6 +22,12 @@ export const en = {
   'data.title': 'Data sources',
   'data.binance': 'Crypto: Binance (public, no key needed)',
   'data.dukascopy': 'Forex & metals: Dukascopy (free, no key needed)',
+  'data.mt5': 'MetaTrader 5 (optional, via a local bridge; used first for forex & metals)',
+  'data.mt5Enable': 'Use MetaTrader 5 bridge',
+  'data.mt5Url': 'Bridge URL',
+  'data.mt5Ok': 'Connected — {company} · XAUUSD {price}',
+  'data.mt5Help':
+    'Run bridge/mt5_bridge.py on the Windows computer where MetaTrader 5 is open and logged in (pip install MetaTrader5, then python mt5_bridge.py).',
   'data.oanda': 'OANDA v20 (optional, used instead of Dukascopy when a token is set)',
   'data.token': 'API token',
   'data.env': 'Account',
@@ -31,7 +37,8 @@ export const en = {
   'data.testing': 'Testing…',
   'data.ok': 'Connected — XAU/USD {price}',
   'data.fail': 'Connection failed: {error}',
-  'data.help': 'Without a token, XAUUSD and other forex / metals come from Dukascopy Bank (Swiss ECN, BID prices). The token is kept only in this browser.',
+  'data.help':
+    'Without MT5 or an OANDA token, XAUUSD and other forex / metals come from Dukascopy Bank (Swiss ECN, BID prices). The token is kept only in this browser.',
   'data.save': 'Save',
   'data.clear': 'Remove token',
   'toolbar.indicators': 'Indicators',

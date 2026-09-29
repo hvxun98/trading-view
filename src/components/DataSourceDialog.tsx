@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DEFAULT_MT5_URL, testMt5 } from '../data/mt5'
 import { testOanda, type OandaConfig } from '../data/oanda'
 import { useT } from '../i18n'
 import { useChartStore } from '../store/useChartStore'
@@ -7,10 +8,14 @@ interface Props {
   onClose: () => void
 }
 
-/** Cấu hình nguồn dữ liệu: token OANDA cho forex & kim loại (XAUUSD…) */
+/** Cấu hình nguồn dữ liệu cho forex & kim loại (XAUUSD…): bridge MetaTrader 5, token OANDA */
 export function DataSourceDialog({ onClose }: Props) {
   const t = useT()
-  const { oanda, setOanda } = useChartStore()
+  const { oanda, setOanda, mt5, setMt5 } = useChartStore()
+  const [mt5Enabled, setMt5Enabled] = useState(!!mt5)
+  const [mt5Url, setMt5Url] = useState(mt5?.url ?? DEFAULT_MT5_URL)
+  const [mt5Status, setMt5Status] = useState<{ ok: boolean; text: string } | null>(null)
+  const [mt5Testing, setMt5Testing] = useState(false)
   const [token, setToken] = useState(oanda?.token ?? '')
   const [env, setEnv] = useState<OandaConfig['env']>(oanda?.env ?? 'practice')
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null)
@@ -29,7 +34,21 @@ export function DataSourceDialog({ onClose }: Props) {
     }
   }
 
+  const testBridge = async () => {
+    setMt5Testing(true)
+    setMt5Status(null)
+    try {
+      const { company, price } = await testMt5({ url: mt5Url.trim() })
+      setMt5Status({ ok: true, text: t('data.mt5Ok', { company, price: price?.toFixed(2) ?? '—' }) })
+    } catch (e) {
+      setMt5Status({ ok: false, text: t('data.fail', { error: (e as Error).message }) })
+    } finally {
+      setMt5Testing(false)
+    }
+  }
+
   const save = () => {
+    setMt5(mt5Enabled && mt5Url.trim() ? { url: mt5Url.trim() } : null)
     setOanda(token.trim() ? { token: token.trim(), env } : null)
     onClose()
   }
@@ -55,6 +74,33 @@ export function DataSourceDialog({ onClose }: Props) {
         <div className="modal-body">
           <div className="form-section">{t('data.binance')}</div>
           <div className="form-section">{t('data.dukascopy')}</div>
+          <div className="form-section">{t('data.mt5')}</div>
+          <label className="form-check">
+            <input name="mt5" type="checkbox" checked={mt5Enabled} onChange={(e) => setMt5Enabled(e.target.checked)} />
+            {t('data.mt5Enable')}
+          </label>
+          <label className="form-row">
+            <span>{t('data.mt5Url')}</span>
+            <input
+              name="mt5Url"
+              autoComplete="off"
+              disabled={!mt5Enabled}
+              value={mt5Url}
+              onChange={(e) => setMt5Url(e.target.value)}
+            />
+          </label>
+          <div className="form-actions">
+            <button
+              className="btn mt5-test"
+              disabled={!mt5Enabled || !mt5Url.trim() || mt5Testing}
+              onClick={testBridge}
+            >
+              {mt5Testing ? t('data.testing') : t('data.test')}
+            </button>
+          </div>
+          {mt5Status && <div className={mt5Status.ok ? 'form-ok' : 'form-error'}>{mt5Status.text}</div>}
+          <p className="form-help">{t('data.mt5Help')}</p>
+
           <div className="form-section">{t('data.oanda')}</div>
           <label className="form-row">
             <span>{t('data.env')}</span>
@@ -74,7 +120,7 @@ export function DataSourceDialog({ onClose }: Props) {
             />
           </label>
           <div className="form-actions">
-            <button className="btn" disabled={!token.trim() || testing} onClick={test}>
+            <button className="btn oanda-test" disabled={!token.trim() || testing} onClick={test}>
               {testing ? t('data.testing') : t('data.test')}
             </button>
             {oanda && (

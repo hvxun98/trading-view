@@ -24,6 +24,12 @@ export const vi: Record<keyof typeof en, string> = {
   'data.title': 'Nguồn dữ liệu',
   'data.binance': 'Tiền mã hoá: Binance (công khai, không cần key)',
   'data.dukascopy': 'Forex & kim loại: Dukascopy (miễn phí, không cần key)',
+  'data.mt5': 'MetaTrader 5 (tuỳ chọn, qua bridge chạy trên máy; ưu tiên cho forex & kim loại)',
+  'data.mt5Enable': 'Dùng bridge MetaTrader 5',
+  'data.mt5Url': 'Địa chỉ bridge',
+  'data.mt5Ok': 'Đã kết nối — {company} · XAUUSD {price}',
+  'data.mt5Help':
+    'Chạy bridge/mt5_bridge.py trên máy Windows đang mở MetaTrader 5 và đã đăng nhập (pip install MetaTrader5, rồi python mt5_bridge.py).',
   'data.oanda': 'OANDA v20 (tuỳ chọn, dùng thay Dukascopy khi có token)',
   'data.token': 'API token',
   'data.env': 'Tài khoản',
@@ -33,7 +39,8 @@ export const vi: Record<keyof typeof en, string> = {
   'data.testing': 'Đang kiểm tra…',
   'data.ok': 'Đã kết nối — XAU/USD {price}',
   'data.fail': 'Kết nối thất bại: {error}',
-  'data.help': 'Chưa có token: XAUUSD và các cặp forex / kim loại lấy từ Dukascopy Bank (sàn ECN Thuỵ Sĩ, giá BID). Token chỉ được lưu trong trình duyệt này.',
+  'data.help':
+    'Không bật MT5 và chưa có token OANDA: XAUUSD và các cặp forex / kim loại lấy từ Dukascopy Bank (sàn ECN Thuỵ Sĩ, giá BID). Token chỉ được lưu trong trình duyệt này.',
   'data.save': 'Lưu',
   'data.clear': 'Xoá token',
   'toolbar.indicators': 'Chỉ báo',

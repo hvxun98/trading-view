@@ -35,6 +35,12 @@ Mặc định lấy từ **Dukascopy Bank** (ngân hàng Thuỵ Sĩ, sàn ECN): 
 không cần đăng ký. Endpoint là JSONP của widget chart `freeserv.dukascopy.com/2.0/index.php?path=chart/json3`, yêu cầu header `Referer`
 nên đi qua proxy `/api/dukascopy` trong `vite.config.ts`. Nến cuối cập nhật mỗi 2 giây.
 
+### Tuỳ chọn: MetaTrader 5
+
+Lấy nến XAUUSD / forex từ terminal MT5 của broker bạn đang dùng, qua bridge Python chạy trên máy Windows có MT5
+(`bridge/mt5_bridge.py`, gói `MetaTrader5` chính thức). Xem hướng dẫn tại [bridge/README.md](bridge/README.md).
+Khi bật, MT5 được ưu tiên trước OANDA và Dukascopy.
+
 ### Tuỳ chọn: OANDA
 
 1. Tạo tài khoản demo miễn phí (fxTrade Practice) tại oanda.com, vào *Manage API Access* để tạo **API token**.

@@ -77,10 +77,11 @@ export function cryptoFallback(): SymbolInfo[] {
   return CRYPTO_FALLBACK.map(cryptoInfo)
 }
 
-/** Tên nguồn dữ liệu thực tế của mã (forex / kim loại: OANDA nếu có token, không thì Dukascopy) */
-export function sourceName(info: SymbolInfo, hasOandaToken: boolean): string {
+/** Tên nguồn dữ liệu thực tế của mã (forex / kim loại: MT5 nếu bật bridge, OANDA nếu có token, không thì Dukascopy) */
+export function sourceName(info: SymbolInfo, sources: { oanda: { token: string } | null; mt5: object | null }): string {
   if (info.provider === 'binance') return 'Binance'
-  return hasOandaToken ? 'OANDA' : 'Dukascopy'
+  if (sources.mt5) return 'MT5'
+  return sources.oanda?.token ? 'OANDA' : 'Dukascopy'
 }
 
 export function getSymbolInfo(symbol: string): SymbolInfo {

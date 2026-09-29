@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getSymbolInfo, sourceName } from '../data/catalog'
-import { subscribeWatchlist } from '../data/feeds'
+import { sourcesKey, subscribeWatchlist } from '../data/feeds'
 import { useT } from '../i18n'
 import { formatPrice, guessPrecision } from '../lib/intervals'
 import { theme } from '../lib/theme'
@@ -9,19 +9,20 @@ import type { Ticker } from '../types'
 import { SymbolSearchDialog } from './SymbolSearchDialog'
 
 export function Watchlist() {
-  const { symbol, setSymbol, watchlist, removeFromWatchlist, oanda } = useChartStore()
+  const { symbol, setSymbol, watchlist, removeFromWatchlist, oanda, mt5 } = useChartStore()
   const t = useT()
   const [tickers, setTickers] = useState<Record<string, Ticker>>({})
   const [adding, setAdding] = useState(false)
 
-  // Đăng ký lại khi danh sách / cấu hình OANDA đổi (key dạng chuỗi để tránh đăng ký thừa)
+  // Đăng ký lại khi danh sách / cấu hình nguồn đổi (key dạng chuỗi để tránh đăng ký thừa)
   const listKey = watchlist.join(',')
-  const oandaKey = oanda ? `${oanda.env}:${oanda.token}` : ''
+  const sources = { oanda, mt5 }
+  const sourcesKeyValue = sourcesKey(sources)
   useEffect(() => {
     const merge = (tk: Ticker) => setTickers((prev) => ({ ...prev, [tk.symbol]: tk }))
-    return subscribeWatchlist(listKey ? listKey.split(',') : [], oanda, merge)
+    return subscribeWatchlist(listKey ? listKey.split(',') : [], sources, merge)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listKey, oandaKey])
+  }, [listKey, sourcesKeyValue])
 
   return (
     <div className="watchlist">
@@ -48,7 +49,7 @@ export function Watchlist() {
             key={s}
             data-symbol={s}
             className={`watchlist-row ${s === symbol ? 'active' : ''}`}
-            title={`${sourceName(info, !!oanda?.token)}:${s} — ${info.description}`}
+            title={`${sourceName(info, sources)}:${s} — ${info.description}`}
             onClick={() => setSymbol(s)}
           >
             <span className="watch-sym">

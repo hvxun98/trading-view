@@ -18,7 +18,7 @@ import { BandPrimitive } from '../chart/BandPrimitive'
 import { DrawingsPrimitive } from '../chart/DrawingsPrimitive'
 import { binanceFeed } from '../data/binance'
 import { getSymbolInfo } from '../data/catalog'
-import { feedsFor } from '../data/feeds'
+import { feedsFor, sourcesKey } from '../data/feeds'
 import { mockFeed } from '../data/mock'
 import {
   COMMENT_TAIL,
@@ -133,9 +133,11 @@ export function Chart() {
     hideAll,
     language,
     oanda,
+    mt5,
   } = useChartStore()
-  // Đổi token / môi trường OANDA thì tải lại dữ liệu
-  const oandaKey = oanda ? `${oanda.env}:${oanda.token}` : ''
+  // Đổi cấu hình nguồn (token OANDA, bridge MT5) thì tải lại dữ liệu
+  const sources = { oanda, mt5 }
+  const sourcesKeyValue = sourcesKey(sources)
   const t = useT()
   const drawings = useChartStore((s) => s.drawings[s.symbol]) ?? NO_DRAWINGS
   const {
@@ -693,10 +695,10 @@ export function Chart() {
     }
 
     const load = async () => {
-      // Thử lần lượt các nguồn (vd. XAUUSD: OANDA nếu có token -> Dukascopy -> Demo)
+      // Thử lần lượt các nguồn (vd. XAUUSD: MT5 -> OANDA nếu có token -> Dukascopy -> Demo)
       let feed: DataFeed = mockFeed
       let data: Candle[] = []
-      for (const f of feedsFor(symbol, oanda)) {
+      for (const f of feedsFor(symbol, sources)) {
         try {
           data = await f.getHistory(symbol, interval)
           feed = f
@@ -749,7 +751,7 @@ export function Chart() {
       unsubscribe()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, interval, oandaKey])
+  }, [symbol, interval, sourcesKeyValue])
 
   // 3. Cuộn sang trái gần hết dữ liệu -> tải thêm lịch sử; theo dõi đã cuộn khỏi realtime chưa
   useEffect(() => {

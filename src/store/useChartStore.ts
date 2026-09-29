@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { DEFAULT_WATCHLIST } from '../data/catalog'
+import type { Mt5Config } from '../data/mt5'
 import type { OandaConfig } from '../data/oanda'
 import { detectLanguage } from '../i18n/detect'
 import type { AnchorPoint, Drawing, DrawingStyle, Interval, Lang, ReplayMode, Tool } from '../types'
@@ -12,6 +13,8 @@ interface ChartState {
   watchlist: string[]
   /** Token OANDA (lưu trong trình duyệt) — null = chưa cấu hình */
   oanda: OandaConfig | null
+  /** Bridge MetaTrader 5 (bridge/mt5_bridge.py) — null = không dùng */
+  mt5: Mt5Config | null
   symbol: string
   interval: Interval
   feedName: string
@@ -47,6 +50,7 @@ interface ChartState {
   addToWatchlist: (symbol: string) => void
   removeFromWatchlist: (symbol: string) => void
   setOanda: (oanda: OandaConfig | null) => void
+  setMt5: (mt5: Mt5Config | null) => void
   setSymbol: (symbol: string) => void
   setInterval: (interval: Interval) => void
   setFeedName: (name: string) => void
@@ -124,6 +128,7 @@ export const useChartStore = create<ChartState>()(
       language: detectLanguage(),
       watchlist: DEFAULT_WATCHLIST,
       oanda: null,
+      mt5: null,
       symbol: 'BTCUSDT',
       interval: '1h',
       feedName: 'Binance',
@@ -152,6 +157,7 @@ export const useChartStore = create<ChartState>()(
         set((s) => (s.watchlist.includes(symbol) ? {} : { watchlist: [...s.watchlist, symbol] })),
       removeFromWatchlist: (symbol) => set((s) => ({ watchlist: s.watchlist.filter((x) => x !== symbol) })),
       setOanda: (oanda) => set({ oanda }),
+      setMt5: (mt5) => set({ mt5 }),
       // Lịch sử undo gắn với symbol đang xem, nên đổi symbol thì xoá lịch sử
       setSymbol: (symbol) =>
         set({ symbol, selectedDrawingId: null, undoStack: [], redoStack: [], ...replayOff }),
@@ -246,6 +252,7 @@ export const useChartStore = create<ChartState>()(
         language: s.language,
         watchlist: s.watchlist,
         oanda: s.oanda,
+        mt5: s.mt5,
         symbol: s.symbol,
         interval: s.interval,
         invertScale: s.invertScale,
