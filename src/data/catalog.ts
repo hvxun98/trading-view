@@ -1,3 +1,5 @@
+import { binanceGet } from './binance'
+
 /** Loại mã: dùng cho các tab trong hộp thoại tìm mã (như TradingView) */
 export type SymbolType = 'crypto' | 'forex' | 'commodity'
 
@@ -97,9 +99,7 @@ let cryptoCache: SymbolInfo[] | null = null
 export async function loadCryptoCatalog(): Promise<SymbolInfo[]> {
   if (cryptoCache) return cryptoCache
   try {
-    const res = await fetch('https://api.binance.com/api/v3/ticker/price')
-    if (!res.ok) throw new Error(`Binance ${res.status}`)
-    const rows = (await res.json()) as { symbol: string }[]
+    const rows = await binanceGet<{ symbol: string }[]>('/api/v3/ticker/price')
     cryptoCache = rows.map((r) => cryptoInfo(r.symbol))
   } catch {
     cryptoCache = cryptoFallback()

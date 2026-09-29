@@ -18,6 +18,8 @@ interface ChartState {
   symbol: string
   interval: Interval
   feedName: string
+  /** Đang hiện dữ liệu Demo tạm thời và thử kết nối lại nguồn thật */
+  feedReconnecting: boolean
 
   replayMode: ReplayMode
   replayPlaying: boolean
@@ -53,7 +55,7 @@ interface ChartState {
   setMt5: (mt5: Mt5Config | null) => void
   setSymbol: (symbol: string) => void
   setInterval: (interval: Interval) => void
-  setFeedName: (name: string) => void
+  setFeedName: (name: string, reconnecting?: boolean) => void
   startReplaySelect: () => void
   activateReplay: () => void
   exitReplay: () => void
@@ -132,6 +134,7 @@ export const useChartStore = create<ChartState>()(
       symbol: 'BTCUSDT',
       interval: '1h',
       feedName: 'Binance',
+      feedReconnecting: false,
 
       replayMode: 'off',
       replayPlaying: false,
@@ -162,7 +165,7 @@ export const useChartStore = create<ChartState>()(
       setSymbol: (symbol) =>
         set({ symbol, selectedDrawingId: null, undoStack: [], redoStack: [], ...replayOff }),
       setInterval: (interval) => set({ interval, ...replayOff }),
-      setFeedName: (feedName) => set({ feedName }),
+      setFeedName: (feedName, reconnecting = false) => set({ feedName, feedReconnecting: reconnecting }),
       startReplaySelect: () => set({ replayMode: 'selecting', replayPlaying: false, activeTool: 'cursor' }),
       activateReplay: () => set({ replayMode: 'active' }),
       exitReplay: () => set(replayOff),

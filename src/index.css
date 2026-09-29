@@ -157,6 +157,10 @@ select {
   font-weight: 600;
 }
 
+.legend-reconnecting {
+  color: #ff9800;
+}
+
 .legend-dot {
   color: var(--text-dim);
 }

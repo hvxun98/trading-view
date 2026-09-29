@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function Legend({ candle, prevClose }: Props) {
-  const { symbol, interval, feedName } = useChartStore()
+  const { symbol, interval, feedName, feedReconnecting } = useChartStore()
   const t = useT()
 
   const precision = pricePrecision(candle?.close ?? 1)
@@ -26,7 +26,13 @@ export function Legend({ candle, prevClose }: Props) {
         <span className="legend-dot">·</span>
         <span>{intervalLabel(interval)}</span>
         <span className="legend-dot">·</span>
-        <span>{feedName}</span>
+        {feedReconnecting ? (
+          <span className="legend-reconnecting" title={t('legend.reconnectingTitle')}>
+            {feedName} · {t('legend.reconnecting')}
+          </span>
+        ) : (
+          <span>{feedName}</span>
+        )}
       </div>
       {candle && (
         <div className="legend-ohlc" style={{ color }}>

@@ -16,7 +16,7 @@ import {
 } from 'lightweight-charts'
 import { BandPrimitive } from '../chart/BandPrimitive'
 import { DrawingsPrimitive } from '../chart/DrawingsPrimitive'
-import { binanceFeed } from '../data/binance'
+import { binanceFeed, isPermanentError } from '../data/binance'
 import { getSymbolInfo } from '../data/catalog'
 import { feedsFor, sourcesKey } from '../data/feeds'
 import { mockFeed } from '../data/mock'
@@ -669,20 +669,25 @@ export function Chart() {
   useEffect(() => {
     let cancelled = false
     let unsubscribe = () => {}
-    const timeScale = chartRef.current?.timeScale()
-    const prevData = dataRef.current
-    // Khoảng cách (số nến) từ nến mới nhất tới mép phải; >= 0 nghĩa là đang xem realtime
-    const scrollPos = prevData.length && timeScale ? timeScale.scrollPosition() : RIGHT_OFFSET
-    // Đang xem lịch sử: nhớ thời điểm ở mép phải để giữ nguyên sau khi đổi khung
-    const range = timeScale?.getVisibleLogicalRange()
-    const anchorTime = scrollPos < 0 && range ? logicalToTime(range.to, prevData) : null
+
+    /** Vị trí đang xem: khoảng cách từ nến mới nhất tới mép phải (>= 0 = realtime) và thời điểm ở mép phải */
+    const captureView = () => {
+      const ts = chartRef.current?.timeScale()
+      const data = dataRef.current
+      const scrollPos = data.length && ts ? ts.scrollPosition() : RIGHT_OFFSET
+      const range = ts?.getVisibleLogicalRange()
+      // Đang xem lịch sử: nhớ thời điểm ở mép phải để giữ nguyên sau khi đổi khung / thay dữ liệu
+      const anchorTime = scrollPos < 0 && range ? logicalToTime(range.to, data) : null
+      return { scrollPos, anchorTime }
+    }
+    const initialView = captureView()
 
     switchingRef.current = true
     loadingOlderRef.current = null
     noMoreHistoryRef.current = false
     replayIndexRef.current = -1
 
-    const restoreView = () => {
+    const restoreView = ({ scrollPos, anchorTime }: ReturnType<typeof captureView>) => {
       const ts = chartRef.current?.timeScale()
       const n = dataRef.current.length
       if (!ts || !n) return
@@ -694,22 +699,26 @@ export function Chart() {
       if (right !== null) ts.scrollToPosition(right - (n - 1), false)
     }
 
-    const load = async () => {
-      // Thử lần lượt các nguồn (vd. XAUUSD: MT5 -> OANDA nếu có token -> Dukascopy -> Demo)
-      let feed: DataFeed = mockFeed
-      let data: Candle[] = []
-      for (const f of feedsFor(symbol, sources)) {
+    // Thử lần lượt các nguồn thật (vd. XAUUSD: MT5 -> OANDA nếu có token -> Dukascopy); Demo là phương án cuối
+    const realFeeds = feedsFor(symbol, sources).filter((f) => f !== mockFeed)
+    /** Lỗi không thể tự hết (vd. mã không tồn tại trên sàn) -> không thử lại */
+    let permanent = false
+    const loadReal = async () => {
+      for (const feed of realFeeds) {
         try {
-          data = await f.getHistory(symbol, interval)
-          feed = f
-          if (data.length) break
-        } catch {
-          // nguồn này lỗi -> thử nguồn tiếp theo
+          const data = await feed.getHistory(symbol, interval)
+          if (data.length) return { feed, data }
+        } catch (e) {
+          if (isPermanentError(e)) permanent = true
         }
       }
-      if (cancelled) return
+      return null
+    }
+
+    const show = async (feed: DataFeed, data: Candle[], view: ReturnType<typeof captureView>) => {
+      unsubscribe()
       feedRef.current = feed
-      setFeedName(feed.name)
+      setFeedName(feed.name, feed === mockFeed && realFeeds.length > 0 && !permanent)
 
       const symbolPrecision = getSymbolInfo(symbol).precision ?? null
       setSymbolPrecision(symbolPrecision)
@@ -719,18 +728,20 @@ export function Chart() {
       })
 
       dataRef.current = data
+      loadingOlderRef.current = null
+      noMoreHistoryRef.current = false
       switchingRef.current = false
       render(data)
-      restoreView()
+      restoreView(view)
 
       // Mốc đang xem cũ hơn dữ liệu vừa tải (vd. đổi sang khung nhỏ hơn): tải thêm rồi canh lại
-      if (anchorTime !== null) {
+      if (view.anchorTime !== null) {
         for (let page = 0; page < MAX_JUMP_PAGES && !cancelled; page++) {
           const first = dataRef.current[0]
-          if (!first || first.time <= anchorTime || !(await loadOlder())) break
+          if (!first || first.time <= view.anchorTime || !(await loadOlder())) break
         }
         if (cancelled) return
-        restoreView()
+        restoreView(view)
       }
 
       unsubscribe = feed.subscribeBars(symbol, interval, (bar) => {
@@ -744,10 +755,48 @@ export function Chart() {
         pushBar(bar, arr)
       })
     }
+
+    // Chờ `ms`, hoặc dừng sớm khi có mạng trở lại / quay lại tab / effect bị huỷ
+    let wake = () => {}
+    const wait = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const id = setTimeout(() => wake(), ms)
+        wake = () => {
+          clearTimeout(id)
+          wake = () => {}
+          resolve()
+        }
+      })
+    const onWake = () => {
+      if (document.visibilityState === 'visible') wake()
+    }
+    window.addEventListener('online', onWake)
+    document.addEventListener('visibilitychange', onWake)
+
+    const load = async () => {
+      const real = await loadReal()
+      if (cancelled) return
+      if (real) return show(real.feed, real.data, initialView)
+
+      // Không tải được nguồn thật (mạng chập chờn, bị chặn, giới hạn tốc độ…): tạm hiện Demo
+      // và tự thử lại cho tới khi được, rồi thay bằng dữ liệu thật mà không đổi vị trí đang xem
+      await show(mockFeed, await mockFeed.getHistory(symbol, interval), initialView)
+      for (let delay = 2000; realFeeds.length && !permanent && !cancelled; delay = Math.min(delay * 2, 30000)) {
+        await wait(delay)
+        // Không thay dữ liệu giữa lúc đang replay
+        if (cancelled || replayModeRef.current !== 'off') continue
+        const retry = await loadReal()
+        if (cancelled) return
+        if (retry) return show(retry.feed, retry.data, captureView())
+      }
+    }
     load()
 
     return () => {
       cancelled = true
+      wake()
+      window.removeEventListener('online', onWake)
+      document.removeEventListener('visibilitychange', onWake)
       unsubscribe()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

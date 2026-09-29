@@ -144,6 +144,8 @@ export const vi: Record<keyof typeof en, string> = {
   'legend.l': 'Thấp',
   'legend.c': 'Đóng',
   'legend.vol': 'KL',
+  'legend.reconnecting': 'đang kết nối lại…',
+  'legend.reconnectingTitle': 'Không tải được dữ liệu thật — đang hiện nến Demo và tự động thử lại',
 
   'pos.target': 'Mục tiêu',
   'pos.stop': 'Dừng',

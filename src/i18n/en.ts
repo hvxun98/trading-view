@@ -142,6 +142,8 @@ export const en = {
   'legend.l': 'L',
   'legend.c': 'C',
   'legend.vol': 'Vol',
+  'legend.reconnecting': 'reconnecting…',
+  'legend.reconnectingTitle': 'Could not load real data — showing demo candles and retrying automatically',
 
   'pos.target': 'Target',
   'pos.stop': 'Stop',
