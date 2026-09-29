@@ -17,7 +17,7 @@ import {
 import { BandPrimitive } from '../chart/BandPrimitive'
 import { DrawingsPrimitive } from '../chart/DrawingsPrimitive'
 import { binanceFeed, isPermanentError } from '../data/binance'
-import { getSymbolInfo } from '../data/catalog'
+import { symbolPrecision } from '../data/catalog'
 import { feedsFor, sourcesKey } from '../data/feeds'
 import { mockFeed } from '../data/mock'
 import {
@@ -30,11 +30,12 @@ import {
   translateDrawing,
 } from '../lib/drawings'
 import { snapPositionPoints, tickSize } from '../lib/position'
-import { formatPrice, formatVolume, pricePrecision, setSymbolPrecision } from '../lib/intervals'
+import { formatPrice, formatVolume, pricePrecision } from '../lib/intervals'
 import { computeRsi } from '../lib/rsi'
 import { theme } from '../lib/theme'
 import { logicalToTime, timeToLogical } from '../lib/timeIndex'
-import { useChartStore } from '../store/useChartStore'
+import { useAppStore } from '../store/useAppStore'
+import { useChartStore, useChartStoreApi } from '../store/useChartStore'
 import type { AnchorPoint, Candle, DataFeed, Drawing, DrawingTool, Lang } from '../types'
 import { DrawingFloatToolbar } from './DrawingFloatToolbar'
 import { PositionSettingsDialog } from './PositionSettingsDialog'
@@ -81,7 +82,8 @@ interface SelectOverlay {
   bottom: number
 }
 
-export function Chart() {
+/** Một ô biểu đồ; `index` là vị trí trong bố cục nhiều biểu đồ (mỗi ô có store riêng) */
+export function Chart({ index }: { index: number }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
@@ -131,10 +133,13 @@ export function Chart() {
     selectedDrawingId,
     lockAll,
     hideAll,
-    language,
-    oanda,
-    mt5,
   } = useChartStore()
+  // Store riêng của biểu đồ này (bố cục nhiều biểu đồ); ngôn ngữ & nguồn dữ liệu dùng chung
+  const store = useChartStoreApi()
+  const { language, oanda, mt5 } = useAppStore()
+  const isActive = useAppStore((s) => s.activeChart === index)
+  const isActiveRef = useRef(isActive)
+  isActiveRef.current = isActive
   // Đổi cấu hình nguồn (token OANDA, bridge MT5) thì tải lại dữ liệu
   const sources = { oanda, mt5 }
   const sourcesKeyValue = sourcesKey(sources)
@@ -154,7 +159,7 @@ export function Chart() {
     updateDrawingText,
     toggleDrawingLock,
     toggleDrawingHidden,
-  } = useChartStore.getState()
+  } = store.getState()
   const replayModeRef = useRef(replayMode)
   replayModeRef.current = replayMode
 
@@ -240,8 +245,8 @@ export function Chart() {
 
   /** Sửa chữ của hình có sẵn (double-click hoặc nút bút chì) */
   const openEditEditor = (id: string) => {
-    const store = useChartStore.getState()
-    const d = (store.drawings[store.symbol] ?? []).find((x) => x.id === id)
+    const state = store.getState()
+    const d = (state.drawings[state.symbol] ?? []).find((x) => x.id === id)
     if (!d || !TEXT_TYPES.includes(d.type)) return
     const box = drawingsRef.current?.textBox(id)
     const anchor = d.type === 'callout' ? d.points[1] : d.points[0]
@@ -251,7 +256,7 @@ export function Chart() {
     const above = d.type === 'note' || d.type === 'comment'
     const py = box ? (above ? box.y + box.h : box.y) : (fallbackY ?? 0)
     const pos = paneToWrap(px, py)
-    store.selectDrawing(id)
+    state.selectDrawing(id)
     drawingsRef.current?.setEditing(id)
     setEditor({
       mode: 'edit',
@@ -282,9 +287,9 @@ export function Chart() {
   /** Nhãn thước đo: chênh lệch giá (%, tick), số nến + thời gian, tổng volume — như TradingView */
   const measureLines = (a: AnchorPoint, b: AnchorPoint): string[] => {
     const data = dataRef.current
-    const lang = useChartStore.getState().language
+    const lang = useAppStore.getState().language
     const diff = b.price - a.price
-    const precision = pricePrecision(a.price)
+    const precision = pricePrecision(a.price, symbolPrecision(store.getState().symbol))
     const sign = diff < 0 ? '−' : ''
     const la = timeToLogical(a.time, data) ?? 0
     const lb = timeToLogical(b.time, data) ?? 0
@@ -345,7 +350,7 @@ export function Chart() {
   useEffect(() => {
     const chart = createChart(containerRef.current!, {
       autoSize: true,
-      localization: { locale: LOCALES[useChartStore.getState().language] },
+      localization: { locale: LOCALES[useAppStore.getState().language] },
       layout: {
         background: { type: ColorType.Solid, color: theme.bg },
         textColor: theme.text,
@@ -393,7 +398,11 @@ export function Chart() {
     candleRef.current = candles
     volumeRef.current = volume
     // Chỉ ở môi trường dev: cho test E2E đọc trạng thái chart
-    if (import.meta.env.DEV) (window as unknown as { __chart?: IChartApi }).__chart = chart
+    if (import.meta.env.DEV) {
+      const w = window as unknown as { __chart?: IChartApi; __charts?: IChartApi[] }
+      ;(w.__charts ??= [])[index] = chart
+      if (index === 0) w.__chart = chart
+    }
 
     // Lớp hình vẽ: toạ độ x tính từ thời gian để không lệch khi tải thêm lịch sử
     const drawingsPrimitive = new DrawingsPrimitive(
@@ -403,7 +412,7 @@ export function Chart() {
       },
       () => visibleData(),
     )
-    drawingsPrimitive.setLanguage(useChartStore.getState().language)
+    drawingsPrimitive.setLanguage(useAppStore.getState().language)
     candles.attachPrimitive(drawingsPrimitive)
     drawingsRef.current = drawingsPrimitive
 
@@ -430,7 +439,7 @@ export function Chart() {
       }
 
       // Xem trước hình vẽ 2 điểm đang vẽ dở / thước đo đang kéo
-      const tool = useChartStore.getState().activeTool
+      const tool = store.getState().activeTool
       const inPricePane = param.point && (param.paneIndex ?? 0) === 0
       if (tool !== 'cursor' && tool !== 'measure' && pendingRef.current && inPricePane) {
         const end = anchorAt(param.point!.x, param.point!.y)
@@ -478,7 +487,7 @@ export function Chart() {
       const x = e.clientX - rect.left
       const y = e.clientY - rect.top
       if (x < 0 || x > chart.timeScale().width()) return
-      const store = useChartStore.getState()
+      const state = store.getState()
 
       // Chọn điểm replay: click bất kỳ đâu (kể cả vùng trống, pane RSI) -> nến gần nhất
       if (replayModeRef.current === 'selecting') {
@@ -488,7 +497,7 @@ export function Chart() {
       }
 
       const inPricePane = y >= 0 && y <= rect.height
-      const tool = store.activeTool
+      const tool = state.activeTool
 
       // Thước đo (công cụ Measure hoặc Shift + click): click đầu -> điểm đầu, click 2 -> chốt,
       // click tiếp theo ở bất kỳ đâu -> xoá thước
@@ -503,14 +512,14 @@ export function Chart() {
         if (!m) measureRef.current = { a: point, b: point, fixed: false }
         else {
           measureRef.current = { ...m, b: point, fixed: true }
-          if (tool === 'measure') store.setTool('cursor')
+          if (tool === 'measure') state.setTool('cursor')
         }
         showMeasure()
         return
       }
 
       if (tool === 'cursor') {
-        store.selectDrawing(inPricePane ? drawingsPrimitive.hit({ x, y }) : null)
+        state.selectDrawing(inPricePane ? drawingsPrimitive.hit({ x, y }) : null)
         return
       }
       if (!inPricePane) return
@@ -520,19 +529,20 @@ export function Chart() {
       const finish = (points: AnchorPoint[]) => {
         pendingRef.current = null
         drawingsPrimitive.setPreview(null)
-        store.addDrawing({ id: crypto.randomUUID(), type: tool, points })
-        store.setTool('cursor')
+        state.addDrawing({ id: crypto.randomUUID(), type: tool, points })
+        state.setTool('cursor')
       }
 
       if (tool === 'text' || tool === 'note' || tool === 'comment') {
-        store.setTool('cursor')
+        state.setTool('cursor')
         openCreateEditor(tool, [point], x, y)
       } else if (tool === 'long' || tool === 'short') {
         const offset = candles.coordinateToPrice(y + POSITION_RISK_PX)
         const rawRisk = offset === null ? point.price * 0.01 : Math.abs(offset - point.price)
         // Giá theo tick, cắt lỗ đúng N tick và chốt lời đúng 2N tick -> R:R = 2 chính xác
-        const tick = tickSize(point.price)
-        const entry = snapPositionPoints([point])[0]
+        const symPrecision = symbolPrecision(state.symbol)
+        const tick = tickSize(point.price, symPrecision)
+        const entry = snapPositionPoints([point], symPrecision)[0]
         const risk = Math.max(1, Math.round(rawRisk / tick)) * tick
         const dir = tool === 'long' ? 1 : -1
         const logical = chart.timeScale().coordinateToLogical(x) ?? 0
@@ -542,7 +552,7 @@ export function Chart() {
             entry,
             { time: end, price: entry.price + dir * 2 * risk },
             { time: end, price: entry.price - dir * risk },
-          ]),
+          ], symPrecision),
         )
       } else if (ONE_CLICK_TOOLS.includes(tool)) finish([point])
       else if (!pendingRef.current) {
@@ -552,20 +562,20 @@ export function Chart() {
         const start = pendingRef.current
         pendingRef.current = null
         drawingsPrimitive.setPreview(null)
-        store.setTool('cursor')
+        state.setTool('cursor')
         openCreateEditor('callout', [start, point], x, y)
       } else finish([pendingRef.current, point])
     }
 
     // Double-click vào text / note / callout để sửa chữ
     const onDblClick = (e: MouseEvent) => {
-      if (useChartStore.getState().activeTool !== 'cursor') return
+      if (store.getState().activeTool !== 'cursor') return
       const rect = chart.panes()[0]?.getHTMLElement()?.getBoundingClientRect()
       if (!rect) return
       const id = drawingsPrimitive.hit({ x: e.clientX - rect.left, y: e.clientY - rect.top })
       if (!id) return
-      const store = useChartStore.getState()
-      const d = (store.drawings[store.symbol] ?? []).find((x) => x.id === id)
+      const state = store.getState()
+      const d = (state.drawings[state.symbol] ?? []).find((x) => x.id === id)
       if (d?.type === 'long' || d?.type === 'short') setSettingsId(id)
       else openEditEditor(id)
     }
@@ -598,7 +608,7 @@ export function Chart() {
       const isPosition = POSITION_TYPES.includes(drag.drawing.type)
       if (drag.anchor === null) {
         // Di chuyển theo từng nến (giống TradingView), giá thì tự do (vị thế: theo tick)
-        const tick = tickSize(drag.drawing.points[0].price)
+        const tick = tickSize(drag.drawing.points[0].price, symbolPrecision(store.getState().symbol))
         const dPrice = isPosition ? Math.round((price - drag.startPrice) / tick) * tick : price - drag.startPrice
         drag.points = translateDrawing(drag.drawing, Math.round(logical - drag.startLogical), dPrice, data)
       } else {
@@ -606,7 +616,7 @@ export function Chart() {
         if (time === null) return
         drag.points = moveAnchor(drag.drawing, drag.anchor, { time, price })
       }
-      if (isPosition) drag.points = snapPositionPoints(drag.points)
+      if (isPosition) drag.points = snapPositionPoints(drag.points, symbolPrecision(store.getState().symbol))
       drawingsPrimitive.setDraft({ ...drag.drawing, points: drag.points })
     }
 
@@ -614,20 +624,20 @@ export function Chart() {
       window.removeEventListener('mousemove', onDragMove)
       window.removeEventListener('mouseup', onDragEnd)
       container.classList.remove('dragging')
-      if (drag?.points) useChartStore.getState().updateDrawing(drag.drawing.id, drag.points)
+      if (drag?.points) store.getState().updateDrawing(drag.drawing.id, drag.points)
       else drawingsPrimitive.setDraft(null)
       drag = null
     }
 
     const onMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return
-      const store = useChartStore.getState()
-      if (store.activeTool !== 'cursor' || replayModeRef.current === 'selecting' || e.shiftKey) return
+      const state = store.getState()
+      if (state.activeTool !== 'cursor' || replayModeRef.current === 'selecting' || e.shiftKey) return
       if (measureRef.current) return
       const p = paneXY(e)
       if (!p || p.x < 0 || p.y < 0 || p.y > p.height || p.x > chart.timeScale().width()) return
       const hit = drawingsPrimitive.hitDetail(p)
-      const drawing = hit && (store.drawings[store.symbol] ?? []).find((d) => d.id === hit.id)
+      const drawing = hit && (state.drawings[state.symbol] ?? []).find((d) => d.id === hit.id)
       const startLogical = chart.timeScale().coordinateToLogical(p.x)
       const startPrice = candles.coordinateToPrice(p.y)
       // Hình bị khoá: không kéo được (click vẫn chọn được), để chart cuộn như bình thường
@@ -636,7 +646,7 @@ export function Chart() {
 
       e.stopPropagation()
       e.preventDefault()
-      store.selectDrawing(hit.id)
+      state.selectDrawing(hit.id)
       drag = { drawing, anchor: hit.anchor, startLogical, startPrice, points: null }
       container.classList.add('dragging')
       window.addEventListener('mousemove', onDragMove)
@@ -720,9 +730,10 @@ export function Chart() {
       feedRef.current = feed
       setFeedName(feed.name, feed === mockFeed && realFeeds.length > 0 && !permanent)
 
-      const symbolPrecision = getSymbolInfo(symbol).precision ?? null
-      setSymbolPrecision(symbolPrecision)
-      const precision = symbolPrecision ?? pricePrecision(data.at(-1)?.close ?? 1)
+      // Số lẻ theo mã của biểu đồ này (mỗi biểu đồ trong bố cục có thể là một mã khác)
+      const symPrecision = symbolPrecision(symbol)
+      drawingsRef.current?.setPrecision(symPrecision)
+      const precision = pricePrecision(data.at(-1)?.close ?? 1, symPrecision)
       candleRef.current?.applyOptions({
         priceFormat: { type: 'price', precision, minMove: 1 / 10 ** precision },
       })
@@ -934,7 +945,7 @@ export function Chart() {
     // RSI bật sau khi đã đảo thang: cũng đảo luôn
     rsi.priceScale().applyOptions({
       scaleMargins: { top: 0.1, bottom: 0.1 },
-      invertScale: useChartStore.getState().invertScale,
+      invertScale: store.getState().invertScale,
     })
     rsi.attachPrimitive(new BandPrimitive(30, 70, 'rgba(126, 87, 194, 0.1)'))
     for (const [price, style] of [
@@ -951,12 +962,17 @@ export function Chart() {
     const data = computeRsi(visibleData(), RSI_PERIOD)
     rsi.setData(data)
     setRsiLast(data.at(-1)?.value ?? null)
-    const raf = requestAnimationFrame(measureRsiPane)
-    window.addEventListener('resize', measureRsiPane)
+    // Đo lại vị trí pane RSI khi ô biểu đồ đổi kích thước (cửa sổ, đổi bố cục nhiều biểu đồ)
+    let raf = requestAnimationFrame(measureRsiPane)
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(measureRsiPane)
+    })
+    if (containerRef.current) observer.observe(containerRef.current)
 
     return () => {
       cancelAnimationFrame(raf)
-      window.removeEventListener('resize', measureRsiPane)
+      observer.disconnect()
       rsiRef.current = null
       setRsiTop(null)
       // Chart có thể đã bị huỷ trước (unmount)
@@ -988,7 +1004,7 @@ export function Chart() {
   // Esc xoá thước đo (các phím khác do useHotkeys xử lý)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && measureRef.current) clearMeasure()
+      if (e.key === 'Escape' && measureRef.current && isActiveRef.current) clearMeasure()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -1034,7 +1050,8 @@ export function Chart() {
   const shown = hovered ?? last
   const data = visibleData()
   const shownPrev = hovered ? prevClose : (data.at(-2)?.close ?? null)
-  usePriceTitle(symbol, last, data.at(-2)?.close ?? null)
+  // Tiêu đề tab theo biểu đồ đang chọn
+  usePriceTitle(symbol, last, data.at(-2)?.close ?? null, isActive)
 
   return (
     <div
@@ -1043,7 +1060,7 @@ export function Chart() {
         e.preventDefault()
         const rect = e.currentTarget.getBoundingClientRect()
         const drawingId = drawingAtClient(e.clientX, e.clientY)
-        if (drawingId) useChartStore.getState().selectDrawing(drawingId)
+        if (drawingId) store.getState().selectDrawing(drawingId)
         setMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top, drawingId })
       }}
       onMouseLeave={() => {

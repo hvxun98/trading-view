@@ -1,6 +1,7 @@
 import { formatPrice, formatVolume, intervalLabel, pricePrecision } from '../lib/intervals'
 import { theme } from '../lib/theme'
 import { useT } from '../i18n'
+import { symbolPrecision } from '../data/catalog'
 import { useChartStore } from '../store/useChartStore'
 import type { Candle } from '../types'
 
@@ -13,7 +14,7 @@ export function Legend({ candle, prevClose }: Props) {
   const { symbol, interval, feedName, feedReconnecting } = useChartStore()
   const t = useT()
 
-  const precision = pricePrecision(candle?.close ?? 1)
+  const precision = pricePrecision(candle?.close ?? 1, symbolPrecision(symbol))
   const fmt = (v: number) => formatPrice(v, precision)
   const color = candle && candle.close >= candle.open ? theme.up : theme.down
   const change = candle && prevClose ? candle.close - prevClose : null

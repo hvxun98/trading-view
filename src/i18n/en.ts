@@ -6,6 +6,10 @@ export const en = {
 
   'toolbar.symbolSearch': 'Symbol Search',
   'toolbar.dataSources': 'Data sources',
+  'toolbar.layout': 'Select layout',
+  'layout.single': 'Single chart',
+  'layout.charts': '{n} charts',
+  'layout.chart': 'Chart {n}',
   'search.title': 'Symbol Search',
   'search.addTitle': 'Add symbol',
   'search.placeholder': 'Search',

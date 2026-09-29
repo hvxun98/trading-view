@@ -86,6 +86,11 @@ export function sourceName(info: SymbolInfo, sources: { oanda: { token: string }
   return sources.oanda?.token ? 'OANDA' : 'Dukascopy'
 }
 
+/** Số chữ số thập phân của mã theo sàn (null = đoán theo độ lớn giá) */
+export function symbolPrecision(symbol: string): number | null {
+  return getSymbolInfo(symbol).precision ?? null
+}
+
 export function getSymbolInfo(symbol: string): SymbolInfo {
   return OANDA_SYMBOLS.find((s) => s.symbol === symbol) ?? cryptoInfo(symbol)
 }

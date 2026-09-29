@@ -9,6 +9,7 @@ import {
   type SymbolType,
 } from '../data/catalog'
 import { useT } from '../i18n'
+import { useAppStore } from '../store/useAppStore'
 import { useChartStore } from '../store/useChartStore'
 
 type Tab = 'all' | SymbolType
@@ -42,7 +43,8 @@ function Highlight({ text, query }: { text: string; query: string }) {
 /** Hộp thoại "Symbol Search" / "Add symbol" của TradingView */
 export function SymbolSearchDialog({ mode, initialQuery = '', onClose }: Props) {
   const t = useT()
-  const { watchlist, setSymbol, addToWatchlist, removeFromWatchlist, oanda, mt5 } = useChartStore()
+  const setSymbol = useChartStore((s) => s.setSymbol)
+  const { watchlist, addToWatchlist, removeFromWatchlist, oanda, mt5 } = useAppStore()
   const [query, setQuery] = useState(initialQuery)
   const [tab, setTab] = useState<Tab>('all')
   const [active, setActive] = useState(0)

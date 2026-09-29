@@ -15,15 +15,16 @@ export function positionSettings(d: Drawing): PositionSettings {
   return { ...DEFAULT_POSITION, ...d.position }
 }
 
-/** Bước giá (tick) theo độ chính xác hiển thị của giá entry */
-export function tickSize(price: number): number {
-  return 1 / 10 ** pricePrecision(price)
+/** Bước giá (tick) theo độ chính xác hiển thị của giá entry (`symbolPrecision`: số lẻ của mã, null = đoán) */
+export function tickSize(price: number, symbolPrecision: number | null = null): number {
+  return 1 / 10 ** pricePrecision(price, symbolPrecision)
 }
 
 /** Làm tròn giá entry / target / stop theo tick (như TradingView) */
-export function snapPositionPoints(points: AnchorPoint[]): AnchorPoint[] {
-  const tick = tickSize(points[0].price)
-  const snap = (v: number) => Number((Math.round(v / tick) * tick).toFixed(pricePrecision(points[0].price)))
+export function snapPositionPoints(points: AnchorPoint[], symbolPrecision: number | null = null): AnchorPoint[] {
+  const precision = pricePrecision(points[0].price, symbolPrecision)
+  const tick = 1 / 10 ** precision
+  const snap = (v: number) => Number((Math.round(v / tick) * tick).toFixed(precision))
   return points.map((p) => ({ ...p, price: snap(p.price) }))
 }
 
@@ -61,7 +62,7 @@ export interface PositionStats {
  * P&L: duyệt các nến từ thời điểm bắt đầu tới mép phải của vị thế — giá chạm entry thì mở,
  * sau đó chạm stop (kiểm tra trước, thận trọng) hoặc target thì đóng; còn mở thì tính theo giá đóng cửa mới nhất.
  */
-export function positionStats(d: Drawing, bars: Candle[]): PositionStats {
+export function positionStats(d: Drawing, bars: Candle[], symbolPrecision: number | null = null): PositionStats {
   const [entry, target, stop] = d.points
   const s = positionSettings(d)
   const dir = d.type === 'long' ? 1 : -1
@@ -99,7 +100,7 @@ export function positionStats(d: Drawing, bars: Candle[]): PositionStats {
   const pnl = status === 'waiting' || !lastPoint ? 0 : (lastPoint.price - entry.price) * dir * qty * s.lotSize
   return {
     dir,
-    precision: pricePrecision(entry.price),
+    precision: pricePrecision(entry.price, symbolPrecision),
     qty,
     limitedByLeverage: qtyLeverage < qtyRisk,
     riskAmount,

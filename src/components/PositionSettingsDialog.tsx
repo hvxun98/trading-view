@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useT } from '../i18n'
+import { symbolPrecision } from '../data/catalog'
 import { pricePrecision } from '../lib/intervals'
 import { formatMoney, formatQty, positionSettings, positionStats, tickSize } from '../lib/position'
 import { useChartStore } from '../store/useChartStore'
@@ -18,12 +19,13 @@ const num = (v: string) => (v.trim() === '' ? NaN : Number(v))
  */
 export function PositionSettingsDialog({ drawing, onClose }: Props) {
   const updateDrawingProps = useChartStore((s) => s.updateDrawingProps)
+  const symPrecision = symbolPrecision(useChartStore((s) => s.symbol))
   const t = useT()
   const [e0, t0, s0] = drawing.points
   const dir = drawing.type === 'long' ? 1 : -1
-  const precision = pricePrecision(e0.price)
+  const precision = pricePrecision(e0.price, symPrecision)
   const initial = positionSettings(drawing)
-  const tick0 = tickSize(e0.price)
+  const tick0 = tickSize(e0.price, symPrecision)
 
   const [accountSize, setAccountSize] = useState(String(initial.accountSize))
   const [lotSize, setLotSize] = useState(String(initial.lotSize))
@@ -38,7 +40,7 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
   const [stopPrice, setStopPrice] = useState(s0.price.toFixed(precision))
 
   const entryNum = num(entry)
-  const tick = isFinite(entryNum) && entryNum > 0 ? tickSize(entryNum) : tick0
+  const tick = isFinite(entryNum) && entryNum > 0 ? tickSize(entryNum, symPrecision) : tick0
   const priceFromTicks = (ticks: number, side: 1 | -1) => (entryNum + side * dir * ticks * tick).toFixed(precision)
   const ticksFromPrice = (price: number) => String(Math.round(Math.abs(price - entryNum) / tick))
 
@@ -73,7 +75,7 @@ export function PositionSettingsDialog({ drawing, onClose }: Props) {
     // Long: target > entry > stop; Short: ngược lại
     (points[1].price - entryNum) * dir > 0 &&
     (entryNum - points[2].price) * dir > 0
-  const preview = positionStats({ ...drawing, points, position: settings }, [])
+  const preview = positionStats({ ...drawing, points, position: settings }, [], symPrecision)
 
   const submit = () => {
     if (!valid) return

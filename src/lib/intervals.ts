@@ -22,16 +22,10 @@ export function intervalLabel(interval: Interval): string {
 }
 
 /**
- * Số chữ số thập phân của mã đang mở (vd. EURUSD 5, XAGUSD 3) — như TradingView, mọi nhãn giá
- * (legend, trục, công cụ vẽ, vị thế…) dùng chung độ chính xác của mã. null = đoán theo độ lớn giá.
+ * Số chữ số thập phân khi hiển thị giá: như TradingView, mọi nhãn giá của một biểu đồ (legend, trục, công cụ vẽ,
+ * vị thế…) dùng độ chính xác của mã (vd. EURUSD 5, XAGUSD 3 — xem symbolPrecision()); null = đoán theo độ lớn giá.
  */
-let symbolPrecision: number | null = null
-
-export function setSymbolPrecision(precision: number | null) {
-  symbolPrecision = precision
-}
-
-export function pricePrecision(price: number): number {
+export function pricePrecision(price: number, symbolPrecision: number | null = null): number {
   return symbolPrecision ?? guessPrecision(price)
 }
 

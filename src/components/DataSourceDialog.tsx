@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { DEFAULT_MT5_URL, testMt5 } from '../data/mt5'
 import { testOanda, type OandaConfig } from '../data/oanda'
 import { useT } from '../i18n'
-import { useChartStore } from '../store/useChartStore'
+import { useAppStore } from '../store/useAppStore'
 
 interface Props {
   onClose: () => void
@@ -11,7 +11,7 @@ interface Props {
 /** Cấu hình nguồn dữ liệu cho forex & kim loại (XAUUSD…): bridge MetaTrader 5, token OANDA */
 export function DataSourceDialog({ onClose }: Props) {
   const t = useT()
-  const { oanda, setOanda, mt5, setMt5 } = useChartStore()
+  const { oanda, setOanda, mt5, setMt5 } = useAppStore()
   const [mt5Enabled, setMt5Enabled] = useState(!!mt5)
   const [mt5Url, setMt5Url] = useState(mt5?.url ?? DEFAULT_MT5_URL)
   const [mt5Status, setMt5Status] = useState<{ ok: boolean; text: string } | null>(null)

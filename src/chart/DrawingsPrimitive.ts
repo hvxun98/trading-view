@@ -147,6 +147,8 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   /** Hình đang sửa chữ (ẩn chữ trên canvas vì ô nhập nằm đè lên) */
   private editingId: string | null = null
   private lang: Lang = 'en'
+  /** Số lẻ của mã trên biểu đồ này (null = đoán theo độ lớn giá) */
+  private precision: number | null = null
   private lockAll = false
   private hideAll = false
   /** Bản nháp của hình đang được kéo (chưa ghi vào store) */
@@ -227,6 +229,11 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
   }
 
   /** Đổi ngôn ngữ nhãn vẽ trên chart (Target / Stop / P&L…) */
+  setPrecision(precision: number | null) {
+    this.precision = precision
+    this.requestUpdate?.()
+  }
+
   setLanguage(lang: Lang) {
     this.lang = lang
     this.requestUpdate?.()
@@ -283,7 +290,7 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
       textColor: () => '#fff',
       backColor: () => backColor,
     })
-    const priceText = (price: number) => formatPrice(price, pricePrecision(price))
+    const priceText = (price: number) => formatPrice(price, pricePrecision(price, this.precision))
     const axisViews = shapes
       .filter((s) => s.drawing.type === 'hline')
       .map((s) => label(s.pts[0].y, priceText(s.drawing.points[0].price), styleOf(s.drawing).color))
@@ -592,7 +599,7 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
     shape.box = { x: left, y: top, w, h: bottom - top }
 
     // Đường giá đã đi: từ lúc chạm entry tới điểm đóng (target/stop) hoặc giá hiện tại
-    const st = positionStats(shape.drawing, this.getBars())
+    const st = positionStats(shape.drawing, this.getBars(), this.precision)
     if (st.openedAt && st.lastPoint) {
       const from = this.toXY(st.openedAt)
       const to = this.toXY(st.lastPoint)
@@ -824,7 +831,7 @@ export class DrawingsPrimitive implements ISeriesPrimitive<Time> {
       ctx.strokeStyle = l.color
       this.line(ctx, { x: left, y: l.y }, { x: right, y: l.y })
       ctx.fillStyle = l.color
-      ctx.fillText(`${l.level} (${formatPrice(l.price)})`, left - 4, l.y + 6)
+      ctx.fillText(`${l.level} (${formatPrice(l.price, pricePrecision(l.price, this.precision))})`, left - 4, l.y + 6)
     }
 
     // Đường chéo nối 2 điểm neo

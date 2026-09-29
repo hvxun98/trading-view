@@ -53,6 +53,10 @@ Token chỉ được lưu trong localStorage của trình duyệt.
 
 ## Tính năng hiện có
 
+- **Nhiều biểu đồ** (nút bố cục ở góc phải toolbar): 1, 2 cột, 2 hàng, 3 cột, 1 lớn + 2 nhỏ, 2×2. Mỗi biểu đồ có
+  mã, khung thời gian, hình vẽ, công cụ vẽ, khoá / ẩn, undo / redo, RSI, đảo thang, replay và nguồn dữ liệu **riêng**.
+  Bấm vào biểu đồ để chọn (viền xanh): toolbar, thanh công cụ vẽ, Object Tree, Watchlist và phím tắt áp dụng cho biểu đồ đó.
+  Bố cục và trạng thái từng biểu đồ được lưu trong trình duyệt
 - Nến + volume, crosshair, legend OHLC, dark theme giống TradingView
 - Khung thời gian 1m, 5m, 15m, 1H, 4H, 1D, 3D, 1W, 1M
 - Tìm mã như TradingView (bấm tên mã hoặc gõ chữ bất kỳ trên chart): tab Tất cả / Crypto / Forex / Hàng hoá, toàn bộ cặp Binance + forex & kim loại OANDA
@@ -83,6 +87,8 @@ Token chỉ được lưu trong localStorage của trình duyệt.
 - Mất kết nối: Binance tự chuyển sang máy chủ dự phòng (`data-api.binance.vision`, `api-gcp.binance.com`); nếu vẫn lỗi thì tạm hiện Demo (legend ghi *Demo · đang kết nối lại…*) và tự thử lại, có dữ liệu thật là thay vào ngay
 
 ## Phím tắt
+
+Áp dụng cho biểu đồ đang chọn.
 
 | Phím | Chức năng |
 |---|---|

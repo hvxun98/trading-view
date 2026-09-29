@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useChartStore } from '../store/useChartStore'
+import { activeChartStore } from '../store/useChartStore'
 import type { DrawingTool } from '../types'
 
 const TOOL_KEYS: Record<string, DrawingTool> = {
@@ -9,13 +9,14 @@ const TOOL_KEYS: Record<string, DrawingTool> = {
   KeyF: 'fib',
 }
 
-/** Phím tắt giống TradingView */
+/** Phím tắt giống TradingView (áp dụng cho biểu đồ đang chọn) */
 export function useHotkeys() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       if (target.closest('input, select, textarea')) return
-      const store = useChartStore.getState()
+      // Phím tắt áp dụng cho biểu đồ đang chọn
+      const store = activeChartStore().getState()
 
       const mod = e.ctrlKey || e.metaKey
       if (mod && e.code === 'KeyZ' && !e.shiftKey) {

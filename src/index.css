@@ -123,6 +123,86 @@ select {
   position: relative;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+}
+
+/* ---------- Nhiều biểu đồ ---------- */
+.chart-grid {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  gap: 2px;
+  background: var(--border);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.layout-2v {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.layout-2h {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.layout-3v {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.layout-1-2,
+.layout-4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.layout-1-2 > .chart-cell:first-child {
+  grid-row: span 2;
+}
+
+.chart-cell {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+}
+
+/* Biểu đồ đang chọn: viền xanh như TradingView */
+.chart-cell.active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  border: 1px solid var(--accent);
+  pointer-events: none;
+}
+
+.layout-menu {
+  right: 80px;
+  min-width: 0;
+  padding: 8px;
+}
+
+.layout-menu-title {
+  padding: 0 4px 6px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 32px);
+  gap: 4px;
+}
+
+.layout-grid .tb-btn {
+  justify-content: center;
+  height: 32px;
+}
+
+.layout-grid .tb-btn.active {
+  color: var(--accent);
+  background: var(--hover);
 }
 
 .chart-wrap.selecting .chart {

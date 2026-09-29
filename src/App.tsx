@@ -1,4 +1,4 @@
-import { Chart } from './components/Chart'
+import { ChartLayout } from './components/ChartLayout'
 import { DrawingToolbar } from './components/DrawingToolbar'
 import { ReplayBar } from './components/ReplayBar'
 import { RightPanel } from './components/RightPanel'
@@ -14,7 +14,7 @@ export default function App() {
       <main className="main">
         <DrawingToolbar />
         <div className="chart-area">
-          <Chart />
+          <ChartLayout />
           <ReplayBar />
         </div>
         <RightPanel />

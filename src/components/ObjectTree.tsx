@@ -1,4 +1,5 @@
 import { useT } from '../i18n'
+import { symbolPrecision } from '../data/catalog'
 import { describeDrawing } from '../lib/drawings'
 import { useChartStore } from '../store/useChartStore'
 import type { Drawing } from '../types'
@@ -6,9 +7,10 @@ import { EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from './icons'
 
 const NO_DRAWINGS: Drawing[] = []
 
-/** Danh sách hình vẽ của symbol hiện tại: chọn / xoá từng hình (giống Object Tree của TradingView) */
+/** Danh sách hình vẽ của biểu đồ đang chọn (mã hiện tại): chọn / xoá từng hình (giống Object Tree của TradingView) */
 export function ObjectTree() {
   const drawings = useChartStore((s) => s.drawings[s.symbol]) ?? NO_DRAWINGS
+  const precision = symbolPrecision(useChartStore((s) => s.symbol))
   const { selectedDrawingId, selectDrawing, removeDrawing, clearDrawings, toggleDrawingLock, toggleDrawingHidden } =
     useChartStore()
   const t = useT()
@@ -33,7 +35,7 @@ export function ObjectTree() {
           onClick={() => !d.hidden && selectDrawing(d.id === selectedDrawingId ? null : d.id)}
         >
           <span className="object-name">{t(`tool.${d.type}`)}</span>
-          <span className="object-desc">{describeDrawing(d)}</span>
+          <span className="object-desc">{describeDrawing(d, precision)}</span>
           <button
             className={`object-btn ${d.hidden ? 'on' : ''}`}
             title={d.hidden ? t('tree.show') : t('tree.hide')}

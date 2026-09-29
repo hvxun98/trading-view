@@ -1,6 +1,6 @@
 import { translate } from '../i18n'
 import type { AnchorPoint, Candle, Drawing, DrawingStyle, DrawingTool, Lang, LineStyleName } from '../types'
-import { formatPrice } from './intervals'
+import { formatPrice as formatNumber, pricePrecision } from './intervals'
 import { logicalToTime, timeToLogical } from './timeIndex'
 
 export const DRAWING_LABELS: Record<DrawingTool, string> = {
@@ -96,9 +96,10 @@ export function formatDuration(seconds: number, lang: Lang = 'en'): string {
   return parts.length ? parts.slice(0, 2).join(' ') : translate(lang, 'duration.m', { n: 0 })
 }
 
-/** Mô tả ngắn cho Object Tree */
-export function describeDrawing(d: Drawing): string {
+/** Mô tả ngắn cho Object Tree (`symbolPrecision`: số lẻ của mã) */
+export function describeDrawing(d: Drawing, symbolPrecision: number | null = null): string {
   const [a, b] = d.points
+  const formatPrice = (price: number) => formatNumber(price, pricePrecision(price, symbolPrecision))
   const time = (t: number) => new Date(t * 1000).toISOString().slice(0, 16).replace('T', ' ')
   if (TEXT_TYPES.includes(d.type)) return d.text?.replace(/\s+/g, ' ') ?? ''
   if (POSITION_TYPES.includes(d.type)) {

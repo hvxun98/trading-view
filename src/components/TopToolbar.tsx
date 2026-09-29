@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { INTERVALS } from '../lib/intervals'
+import { LAYOUTS, layoutInfo, type LayoutInfo } from '../lib/layouts'
+import { useAppStore } from '../store/useAppStore'
 import { useChartStore } from '../store/useChartStore'
 import type { Lang } from '../types'
 import { DataSourceDialog } from './DataSourceDialog'
@@ -24,9 +26,9 @@ export function TopToolbar() {
     toggleRsi,
     undo,
     redo,
-    language,
-    setLanguage,
   } = useChartStore()
+  const { language, setLanguage, layout, setLayout } = useAppStore()
+  const [layoutOpen, setLayoutOpen] = useState(false)
   const t = useT()
   const [langOpen, setLangOpen] = useState(false)
   const canUndo = useChartStore((s) => s.undoStack.length > 0)
@@ -58,9 +60,7 @@ export function TopToolbar() {
         </svg>
         {symbol}
       </button>
-      {search !== null && (
-        <SymbolSearchDialog mode="change" initialQuery={search} onClose={() => setSearch(null)} />
-      )}
+      {search !== null && <SymbolSearchDialog mode="change" initialQuery={search} onClose={() => setSearch(null)} />}
 
       <div className="divider" />
 
@@ -127,6 +127,40 @@ export function TopToolbar() {
 
       <div className="toolbar-spacer" />
 
+      <div className="menu-anchor">
+        <button
+          className={`tb-btn tb-icon layout-btn ${layoutOpen ? 'active' : ''}`}
+          onClick={() => setLayoutOpen((v) => !v)}
+          onBlur={() => setTimeout(() => setLayoutOpen(false), 150)}
+          title={t('toolbar.layout')}
+          data-layout={layout}
+        >
+          <LayoutIcon layout={layoutInfo(layout)} />
+        </button>
+        {layoutOpen && (
+          <div className="symbol-dropdown layout-menu">
+            <div className="layout-menu-title">{t('toolbar.layout')}</div>
+            <div className="layout-grid">
+              {LAYOUTS.map((l) => (
+                <button
+                  key={l.id}
+                  className={`tb-btn tb-icon ${l.id === layout ? 'active' : ''}`}
+                  data-layout={l.id}
+                  title={l.count === 1 ? t('layout.single') : t('layout.charts', { n: l.count })}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    setLayout(l.id)
+                    setLayoutOpen(false)
+                  }}
+                >
+                  <LayoutIcon layout={l} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <button className="tb-btn tb-icon" title={t('toolbar.dataSources')} onClick={() => setDataOpen(true)}>
         <SettingsIcon />
       </button>
@@ -161,5 +195,16 @@ export function TopToolbar() {
         )}
       </div>
     </header>
+  )
+}
+
+/** Biểu tượng bố cục: các ô biểu đồ trong khung 18×18 */
+function LayoutIcon({ layout }: { layout: LayoutInfo }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1">
+      {layout.cells.map(([x, y, w, h], i) => (
+        <rect key={i} x={x + 0.5} y={y + 0.5} width={w - 1} height={h - 1} rx="1" />
+      ))}
+    </svg>
   )
 }

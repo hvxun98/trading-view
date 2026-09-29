@@ -8,6 +8,10 @@ export const vi: Record<keyof typeof en, string> = {
 
   'toolbar.symbolSearch': 'Tìm kiếm mã',
   'toolbar.dataSources': 'Nguồn dữ liệu',
+  'toolbar.layout': 'Chọn bố cục',
+  'layout.single': 'Một biểu đồ',
+  'layout.charts': '{n} biểu đồ',
+  'layout.chart': 'Biểu đồ {n}',
   'search.title': 'Tìm kiếm mã',
   'search.addTitle': 'Thêm mã',
   'search.placeholder': 'Tìm kiếm',

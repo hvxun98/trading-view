@@ -4,12 +4,15 @@ import { sourcesKey, subscribeWatchlist } from '../data/feeds'
 import { useT } from '../i18n'
 import { formatPrice, guessPrecision } from '../lib/intervals'
 import { theme } from '../lib/theme'
+import { useAppStore } from '../store/useAppStore'
 import { useChartStore } from '../store/useChartStore'
 import type { Ticker } from '../types'
 import { SymbolSearchDialog } from './SymbolSearchDialog'
 
 export function Watchlist() {
-  const { symbol, setSymbol, watchlist, removeFromWatchlist, oanda, mt5 } = useChartStore()
+  // Bấm mã -> đổi mã của biểu đồ đang chọn
+  const { symbol, setSymbol } = useChartStore()
+  const { watchlist, removeFromWatchlist, oanda, mt5 } = useAppStore()
   const t = useT()
   const [tickers, setTickers] = useState<Record<string, Ticker>>({})
   const [adding, setAdding] = useState(false)

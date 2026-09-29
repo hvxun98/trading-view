@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useChartStore } from '../store/useChartStore'
+import { useAppStore } from '../store/useAppStore'
 import type { Lang } from '../types'
 import { en } from './en'
 import { vi } from './vi'
@@ -17,6 +17,6 @@ export function translate(lang: Lang, key: TKey, params?: TParams): string {
 
 /** Hook dịch cho component: tự render lại khi đổi ngôn ngữ */
 export function useT(): TFunction {
-  const lang = useChartStore((s) => s.language)
+  const lang = useAppStore((s) => s.language)
   return useCallback((key, params) => translate(lang, key, params), [lang])
 }
