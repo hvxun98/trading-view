@@ -17,6 +17,7 @@ const INTERVAL: Record<Interval, string> = {
   '1m': '1MIN',
   '5m': '5MIN',
   '15m': '15MIN',
+  '30m': '30MIN',
   '1h': '1HOUR',
   '4h': '4HOUR',
   '1d': '1DAY',

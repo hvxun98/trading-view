@@ -4,6 +4,7 @@ export const INTERVALS: { value: Interval; label: string; seconds: number }[] = 
   { value: '1m', label: '1m', seconds: 60 },
   { value: '5m', label: '5m', seconds: 300 },
   { value: '15m', label: '15m', seconds: 900 },
+  { value: '30m', label: '30m', seconds: 1800 },
   { value: '1h', label: '1H', seconds: 3600 },
   { value: '4h', label: '4H', seconds: 14400 },
   { value: '1d', label: '1D', seconds: 86400 },

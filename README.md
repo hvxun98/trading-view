@@ -58,7 +58,7 @@ Token chỉ được lưu trong localStorage của trình duyệt.
   Bấm vào biểu đồ để chọn (viền xanh): toolbar, thanh công cụ vẽ, Object Tree, Watchlist và phím tắt áp dụng cho biểu đồ đó.
   Bố cục và trạng thái từng biểu đồ được lưu trong trình duyệt
 - Nến + volume, crosshair, legend OHLC, dark theme giống TradingView
-- Khung thời gian 1m, 5m, 15m, 1H, 4H, 1D, 3D, 1W, 1M
+- Khung thời gian 1m, 5m, 15m, 30m, 1H, 4H, 1D, 3D, 1W, 1M
 - Tìm mã như TradingView (bấm tên mã hoặc gõ chữ bất kỳ trên chart): tab Tất cả / Crypto / Forex / Hàng hoá, toàn bộ cặp Binance + forex & kim loại OANDA
 - Watchlist: nút **+** thêm mã, **×** xoá mã, giá realtime (Binance WebSocket, OANDA hỏi định kỳ), lưu trong trình duyệt
 - **XAUUSD, XAGUSD, EURUSD…** (giá spot, BID) từ **Dukascopy Bank** — miễn phí, không cần key; có token OANDA v20 thì ưu tiên OANDA
