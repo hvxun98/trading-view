@@ -27,8 +27,16 @@ const dukascopy: ProxyOptions = {
   },
 }
 
+/** Swissquote (giá spot realtime): /api/swissquote/XAU/USD -> forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD */
+const swissquote: ProxyOptions = {
+  target: 'https://forex-data-feed.swissquote.com',
+  changeOrigin: true,
+  rewrite: (path) => path.replace(/^\/api\/swissquote/, '/public-quotes/bboquotes/instrument'),
+}
+
 const proxy = {
   '/api/dukascopy': dukascopy,
+  '/api/swissquote': swissquote,
   '/api/oanda/practice': oanda('https://api-fxpractice.oanda.com', '/api/oanda/practice'),
   '/api/oanda/live': oanda('https://api-fxtrade.oanda.com', '/api/oanda/live'),
 }

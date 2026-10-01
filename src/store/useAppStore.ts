@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { DEFAULT_WATCHLIST } from '../data/catalog'
+import { DEFAULT_WATCHLIST, type MetalsSource } from '../data/catalog'
 import type { Mt5Config } from '../data/mt5'
 import type { OandaConfig } from '../data/oanda'
 import { detectLanguage } from '../i18n/detect'
@@ -17,6 +17,8 @@ interface AppState {
   oanda: OandaConfig | null
   /** Bridge MetaTrader 5 (bridge/mt5_bridge.py) — null = không dùng */
   mt5: Mt5Config | null
+  /** Nguồn realtime cho XAUUSD / XAGUSD khi không dùng MT5 */
+  metalsSource: MetalsSource
   /** Bố cục nhiều biểu đồ */
   layout: LayoutId
   /** Biểu đồ đang chọn: toolbar, công cụ vẽ, Object Tree, Watchlist, phím tắt áp dụng cho biểu đồ này */
@@ -32,6 +34,7 @@ interface AppState {
   removeFromWatchlist: (symbol: string) => void
   setOanda: (oanda: OandaConfig | null) => void
   setMt5: (mt5: Mt5Config | null) => void
+  setMetalsSource: (source: MetalsSource) => void
   setLayout: (layout: LayoutId) => void
   setActiveChart: (index: number) => void
   setReplayBarPos: (pos: { x: number; y: number } | null) => void
@@ -73,6 +76,7 @@ export const useAppStore = create<AppState>()(
       watchlist: DEFAULT_WATCHLIST,
       oanda: null,
       mt5: null,
+      metalsSource: 'spot',
       layout: '1',
       activeChart: 0,
       replayBarPos: null,
@@ -83,6 +87,7 @@ export const useAppStore = create<AppState>()(
       removeFromWatchlist: (symbol) => set((s) => ({ watchlist: s.watchlist.filter((x) => x !== symbol) })),
       setOanda: (oanda) => set({ oanda }),
       setMt5: (mt5) => set({ mt5 }),
+      setMetalsSource: (metalsSource) => set({ metalsSource }),
       // Bớt biểu đồ: nếu biểu đồ đang chọn bị ẩn thì chọn biểu đồ cuối còn lại
       setLayout: (layout) =>
         set((s) => ({ layout, activeChart: Math.min(s.activeChart, layoutInfo(layout).count - 1) })),
@@ -97,6 +102,7 @@ export const useAppStore = create<AppState>()(
         watchlist: s.watchlist,
         oanda: s.oanda,
         mt5: s.mt5,
+        metalsSource: s.metalsSource,
         layout: s.layout,
         activeChart: s.activeChart,
         replayBarPos: s.replayBarPos,

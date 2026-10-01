@@ -27,7 +27,12 @@ export const vi: Record<keyof typeof en, string> = {
   'watch.remove': 'Xoá khỏi danh sách theo dõi',
   'data.title': 'Nguồn dữ liệu',
   'data.binance': 'Tiền mã hoá: Binance (công khai, không cần key)',
-  'data.dukascopy': 'Forex & kim loại: Dukascopy (miễn phí, không cần key)',
+  'data.dukascopy': 'Forex & kim loại: lịch sử Dukascopy + giá realtime Swissquote (miễn phí, không cần key)',
+  'data.metals': 'XAUUSD / XAGUSD realtime',
+  'data.metalsSpot': 'Giá spot: Dukascopy + Swissquote (cập nhật mỗi giây)',
+  'data.metalsFutures': 'Binance XAUUSDT / XAGUSDT perpetual (WebSocket, đã bỏ cuối tuần)',
+  'data.metalsHelp':
+    'Binance perpetual giao dịch 24/7; các nến trong giờ thị trường kim loại đóng cửa (17:00 thứ Sáu – 18:00 Chủ nhật giờ New York và giờ nghỉ 17:00–18:00 hằng ngày) bị bỏ để chart giống OANDA. Nến tuần / tháng vẫn gồm biến động cuối tuần. MT5 (nếu bật) được ưu tiên trước.',
   'data.mt5': 'MetaTrader 5 (tuỳ chọn, qua bridge chạy trên máy; ưu tiên cho forex & kim loại)',
   'data.mt5Enable': 'Dùng bridge MetaTrader 5',
   'data.mt5Url': 'Địa chỉ bridge',

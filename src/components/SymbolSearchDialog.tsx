@@ -44,7 +44,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
 export function SymbolSearchDialog({ mode, initialQuery = '', onClose }: Props) {
   const t = useT()
   const setSymbol = useChartStore((s) => s.setSymbol)
-  const { watchlist, addToWatchlist, removeFromWatchlist, oanda, mt5 } = useAppStore()
+  const { watchlist, addToWatchlist, removeFromWatchlist, oanda, mt5, metalsSource } = useAppStore()
   const [query, setQuery] = useState(initialQuery)
   const [tab, setTab] = useState<Tab>('all')
   const [active, setActive] = useState(0)
@@ -177,7 +177,7 @@ export function SymbolSearchDialog({ mode, initialQuery = '', onClose }: Props) 
                 </span>
                 <span className="sym-desc">{isCustom ? t('search.custom', { symbol: s.symbol }) : s.description}</span>
                 <span className="sym-type">{t(`search.${s.type}`)}</span>
-                <span className="sym-exchange">{sourceName(s, { oanda, mt5 })}</span>
+                <span className="sym-exchange">{sourceName(s, { oanda, mt5, metalsSource })}</span>
                 {mode === 'add' && (
                   <span
                     className={`sym-add ${inList ? 'added' : ''}`}

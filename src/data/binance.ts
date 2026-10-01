@@ -41,9 +41,9 @@ export async function binanceGet<T>(path: string): Promise<T> {
   throw error
 }
 
-type RawKline = [number, string, string, string, string, string, ...unknown[]]
+export type RawKline = [number, string, string, string, string, string, ...unknown[]]
 
-function toCandle(k: RawKline): Candle {
+export function toCandle(k: RawKline): Candle {
   return {
     time: Math.floor(k[0] / 1000) as UTCTimestamp,
     open: +k[1],
@@ -54,8 +54,8 @@ function toCandle(k: RawKline): Candle {
   }
 }
 
-/** Mở WebSocket tự kết nối lại khi rớt mạng. Trả về hàm huỷ. */
-function openStream(path: string, onMessage: (data: unknown) => void): () => void {
+/** Mở WebSocket tự kết nối lại khi rớt mạng (lần lượt thử các máy chủ `hosts`). Trả về hàm huỷ. */
+export function openStream(path: string, onMessage: (data: unknown) => void, hosts = WS_HOSTS): () => void {
   let ws: WebSocket | null = null
   let disposed = false
   let retry = 0
@@ -64,7 +64,7 @@ function openStream(path: string, onMessage: (data: unknown) => void): () => voi
 
   const connect = () => {
     let opened = false
-    ws = new WebSocket(`${WS_HOSTS[host]}${path}`)
+    ws = new WebSocket(`${hosts[host]}${path}`)
     ws.onopen = () => {
       opened = true
       retry = 0
@@ -73,7 +73,7 @@ function openStream(path: string, onMessage: (data: unknown) => void): () => voi
     ws.onclose = () => {
       if (disposed) return
       // Không kết nối được máy chủ này -> lần sau thử máy chủ dự phòng
-      if (!opened) host = (host + 1) % WS_HOSTS.length
+      if (!opened) host = (host + 1) % hosts.length
       timer = setTimeout(connect, Math.min(1000 * 2 ** retry++, 15000))
     }
   }

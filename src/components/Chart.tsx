@@ -136,12 +136,12 @@ export function Chart({ index }: { index: number }) {
   } = useChartStore()
   // Store riêng của biểu đồ này (bố cục nhiều biểu đồ); ngôn ngữ & nguồn dữ liệu dùng chung
   const store = useChartStoreApi()
-  const { language, oanda, mt5 } = useAppStore()
+  const { language, oanda, mt5, metalsSource } = useAppStore()
   const isActive = useAppStore((s) => s.activeChart === index)
   const isActiveRef = useRef(isActive)
   isActiveRef.current = isActive
   // Đổi cấu hình nguồn (token OANDA, bridge MT5) thì tải lại dữ liệu
-  const sources = { oanda, mt5 }
+  const sources = { oanda, mt5, metalsSource }
   const sourcesKeyValue = sourcesKey(sources)
   const t = useT()
   const drawings = useChartStore((s) => s.drawings[s.symbol]) ?? NO_DRAWINGS

@@ -25,7 +25,12 @@ export const en = {
   'watch.remove': 'Remove from watchlist',
   'data.title': 'Data sources',
   'data.binance': 'Crypto: Binance (public, no key needed)',
-  'data.dukascopy': 'Forex & metals: Dukascopy (free, no key needed)',
+  'data.dukascopy': 'Forex & metals: Dukascopy history + Swissquote live prices (free, no key needed)',
+  'data.metals': 'XAUUSD / XAGUSD realtime',
+  'data.metalsSpot': 'Spot price: Dukascopy + Swissquote (updates every second)',
+  'data.metalsFutures': 'Binance XAUUSDT / XAGUSDT perpetual (WebSocket, weekends removed)',
+  'data.metalsHelp':
+    'Binance perpetuals trade 24/7; candles during the metals market close (Fri 17:00 – Sun 18:00 New York and the daily 17:00–18:00 break) are removed so the chart looks like OANDA. Weekly / monthly candles still include weekend moves. MT5 (when enabled) is used first.',
   'data.mt5': 'MetaTrader 5 (optional, via a local bridge; used first for forex & metals)',
   'data.mt5Enable': 'Use MetaTrader 5 bridge',
   'data.mt5Url': 'Bridge URL',

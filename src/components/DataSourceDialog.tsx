@@ -11,7 +11,8 @@ interface Props {
 /** Cấu hình nguồn dữ liệu cho forex & kim loại (XAUUSD…): bridge MetaTrader 5, token OANDA */
 export function DataSourceDialog({ onClose }: Props) {
   const t = useT()
-  const { oanda, setOanda, mt5, setMt5 } = useAppStore()
+  const { oanda, setOanda, mt5, setMt5, metalsSource, setMetalsSource } = useAppStore()
+  const [metals, setMetals] = useState(metalsSource)
   const [mt5Enabled, setMt5Enabled] = useState(!!mt5)
   const [mt5Url, setMt5Url] = useState(mt5?.url ?? DEFAULT_MT5_URL)
   const [mt5Status, setMt5Status] = useState<{ ok: boolean; text: string } | null>(null)
@@ -49,6 +50,7 @@ export function DataSourceDialog({ onClose }: Props) {
 
   const save = () => {
     setMt5(mt5Enabled && mt5Url.trim() ? { url: mt5Url.trim() } : null)
+    setMetalsSource(metals)
     setOanda(token.trim() ? { token: token.trim(), env } : null)
     onClose()
   }
@@ -74,6 +76,30 @@ export function DataSourceDialog({ onClose }: Props) {
         <div className="modal-body">
           <div className="form-section">{t('data.binance')}</div>
           <div className="form-section">{t('data.dukascopy')}</div>
+
+          <div className="form-section">{t('data.metals')}</div>
+          <label className="form-check">
+            <input
+              type="radio"
+              name="metals"
+              value="spot"
+              checked={metals === 'spot'}
+              onChange={() => setMetals('spot')}
+            />
+            {t('data.metalsSpot')}
+          </label>
+          <label className="form-check">
+            <input
+              type="radio"
+              name="metals"
+              value="binanceFutures"
+              checked={metals === 'binanceFutures'}
+              onChange={() => setMetals('binanceFutures')}
+            />
+            {t('data.metalsFutures')}
+          </label>
+          <p className="form-help">{t('data.metalsHelp')}</p>
+
           <div className="form-section">{t('data.mt5')}</div>
           <label className="form-check">
             <input name="mt5" type="checkbox" checked={mt5Enabled} onChange={(e) => setMt5Enabled(e.target.checked)} />

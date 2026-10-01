@@ -14,6 +14,10 @@ export interface SymbolInfo {
   providerSymbol: string
   /** Mã tương ứng trên Dukascopy (nguồn forex / kim loại miễn phí), vd. "XAU/USD" */
   dukascopySymbol?: string
+  /** Cặp trên Swissquote cho giá realtime (spot), vd. "XAU/USD" */
+  spotSymbol?: string
+  /** Hợp đồng vĩnh cửu tương ứng trên Binance Futures, vd. "XAUUSDT" (chỉ vàng, bạc) */
+  binanceFuturesSymbol?: string
   /** Số chữ số thập phân khi hiển thị giá (theo sàn) */
   precision?: number
   /** Giá tham khảo cho dữ liệu Demo khi không kết nối được nguồn thật */
@@ -49,6 +53,8 @@ export const OANDA_SYMBOLS: SymbolInfo[] = OANDA.map(([id, description, type, pr
   mockPrice,
   // Dukascopy đặt tên bạch kim / palladium là "XPT.CMD/USD", "XPD.CMD/USD"
   dukascopySymbol: id.startsWith('XPT') || id.startsWith('XPD') ? id.replace('_', '.CMD/') : id.replace('_', '/'),
+  spotSymbol: id.replace('_', '/'),
+  binanceFuturesSymbol: id === 'XAU_USD' || id === 'XAG_USD' ? id.replace('_', '') + 'T' : undefined,
 }))
 
 /** Đồng định giá phổ biến trên Binance — dùng để tách base/quote từ mã (BTCUSDT -> BTC / USDT) */
@@ -79,10 +85,17 @@ export function cryptoFallback(): SymbolInfo[] {
   return CRYPTO_FALLBACK.map(cryptoInfo)
 }
 
-/** Tên nguồn dữ liệu thực tế của mã (forex / kim loại: MT5 nếu bật bridge, OANDA nếu có token, không thì Dukascopy) */
-export function sourceName(info: SymbolInfo, sources: { oanda: { token: string } | null; mt5: object | null }): string {
+/** Nguồn realtime cho vàng / bạc khi không dùng MT5: giá spot (Dukascopy + Swissquote) hoặc Binance perpetual */
+export type MetalsSource = 'spot' | 'binanceFutures'
+
+/** Tên nguồn dữ liệu thực tế của mã (cùng thứ tự ưu tiên với feedsFor) */
+export function sourceName(
+  info: SymbolInfo,
+  sources: { oanda: { token: string } | null; mt5: object | null; metalsSource?: MetalsSource },
+): string {
   if (info.provider === 'binance') return 'Binance'
   if (sources.mt5) return 'MT5'
+  if (sources.metalsSource === 'binanceFutures' && info.binanceFuturesSymbol) return 'Binance Futures'
   return sources.oanda?.token ? 'OANDA' : 'Dukascopy'
 }
 

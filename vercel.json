@@ -3,5 +3,8 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/api/oanda/:env/:path*", "destination": "/api/oanda" }]
+  "rewrites": [
+    { "source": "/api/oanda/:env/:path*", "destination": "/api/oanda" },
+    { "source": "/api/swissquote/:base/:quote", "destination": "/api/swissquote" }
+  ]
 }

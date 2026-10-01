@@ -33,7 +33,18 @@ npx vercel deploy --prod --token <VERCEL_TOKEN>
 
 Mặc định lấy từ **Dukascopy Bank** (ngân hàng Thuỵ Sĩ, sàn ECN): nến spot BID cho XAU/USD, XAG/USD, XPT, XPD và các cặp forex chính,
 không cần đăng ký. Endpoint là JSONP của widget chart `freeserv.dukascopy.com/2.0/index.php?path=chart/json3`, yêu cầu header `Referer`
-nên đi qua proxy `/api/dukascopy` trong `vite.config.ts`. Nến cuối cập nhật mỗi 2 giây.
+nên đi qua proxy `/api/dukascopy` trong `vite.config.ts`.
+
+Giá realtime lấy từ **Swissquote Bank** (BID spot, endpoint công khai `forex-data-feed.swissquote.com/public-quotes/bboquotes`,
+không có tài liệu chính thức) mỗi giây qua proxy `/api/swissquote`: nến cuối và Watchlist nhảy gần như realtime,
+còn lịch sử nến vẫn từ Dukascopy.
+
+### Tuỳ chọn: Binance XAUUSDT / XAGUSDT perpetual (WebSocket)
+
+Trong ⚙ **Nguồn dữ liệu** → *XAUUSD / XAGUSD realtime* → chọn Binance perpetual: lịch sử + WebSocket `fstream.binance.com`
+(miễn phí, không cần key). Đây là giá hợp đồng vĩnh cửu (bám giá spot, có thể lệch nhẹ) và giao dịch 24/7, nên app bỏ các nến
+trong giờ thị trường kim loại đóng cửa như OANDA: 17:00 thứ Sáu → 18:00 Chủ nhật và 17:00–18:00 hằng ngày (giờ New York).
+Nến tuần / tháng không lọc được nên vẫn gồm biến động cuối tuần.
 
 ### Tuỳ chọn: MetaTrader 5
 

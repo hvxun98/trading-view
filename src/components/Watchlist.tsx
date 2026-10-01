@@ -12,14 +12,14 @@ import { SymbolSearchDialog } from './SymbolSearchDialog'
 export function Watchlist() {
   // Bấm mã -> đổi mã của biểu đồ đang chọn
   const { symbol, setSymbol } = useChartStore()
-  const { watchlist, removeFromWatchlist, oanda, mt5 } = useAppStore()
+  const { watchlist, removeFromWatchlist, oanda, mt5, metalsSource } = useAppStore()
   const t = useT()
   const [tickers, setTickers] = useState<Record<string, Ticker>>({})
   const [adding, setAdding] = useState(false)
 
   // Đăng ký lại khi danh sách / cấu hình nguồn đổi (key dạng chuỗi để tránh đăng ký thừa)
   const listKey = watchlist.join(',')
-  const sources = { oanda, mt5 }
+  const sources = { oanda, mt5, metalsSource }
   const sourcesKeyValue = sourcesKey(sources)
   useEffect(() => {
     const merge = (tk: Ticker) => setTickers((prev) => ({ ...prev, [tk.symbol]: tk }))
