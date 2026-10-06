@@ -6,6 +6,13 @@ export const en = {
 
   'toolbar.symbolSearch': 'Symbol Search',
   'toolbar.dataSources': 'Data sources',
+  'toolbar.snapshot': 'Take a snapshot',
+  'snapshot.copy': 'Copy chart image',
+  'snapshot.download': 'Download image',
+  'snapshot.copied': 'Chart image copied — press Ctrl+V to paste',
+  'snapshot.downloaded': 'Chart image downloaded',
+  'snapshot.downloadedInstead': 'This browser blocked the clipboard, so the image was downloaded instead',
+  'snapshot.failed': 'Could not take a snapshot',
   'toolbar.layout': 'Select layout',
   'layout.single': 'Single chart',
   'layout.charts': '{n} charts',

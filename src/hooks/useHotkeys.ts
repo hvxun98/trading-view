@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { copyChartImage } from '../lib/snapshotActions'
 import { activeChartStore } from '../store/useChartStore'
 import type { DrawingTool } from '../types'
 
@@ -19,7 +20,14 @@ export function useHotkeys() {
       const store = activeChartStore().getState()
 
       const mod = e.ctrlKey || e.metaKey
-      if (mod && e.code === 'KeyZ' && !e.shiftKey) {
+      // Ctrl + C (khi không bôi đen chữ) hoặc Ctrl + Alt + S như TradingView: chép ảnh biểu đồ đang chọn
+      const copyImage =
+        (mod && e.code === 'KeyC' && !e.shiftKey && !e.altKey && !window.getSelection()?.toString()) ||
+        (mod && e.altKey && e.code === 'KeyS')
+      if (copyImage) {
+        e.preventDefault()
+        copyChartImage()
+      } else if (mod && e.code === 'KeyZ' && !e.shiftKey) {
         e.preventDefault()
         store.undo()
       } else if (mod && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) {

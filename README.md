@@ -69,6 +69,8 @@ Token chỉ được lưu trong localStorage của trình duyệt.
   Bấm vào biểu đồ để chọn (viền xanh): toolbar, thanh công cụ vẽ, Object Tree, Watchlist và phím tắt áp dụng cho biểu đồ đó.
   Bố cục và trạng thái từng biểu đồ được lưu trong trình duyệt
 - Nến + volume, crosshair, legend OHLC, dark theme giống TradingView
+- Chụp ảnh biểu đồ (nút 📷 hoặc `Ctrl + C`): ảnh PNG HD (tối thiểu gấp 2 độ phân giải màn hình) của biểu đồ đang chọn,
+  gồm hình vẽ, chỉ báo và dòng tiêu đề mã / khung / OHLC, chép vào bộ nhớ tạm để `Ctrl + V`; hoặc tải ảnh xuống
 - Khung thời gian 1m, 5m, 15m, 30m, 1H, 4H, 1D, 3D, 1W, 1M
 - Tìm mã như TradingView (bấm tên mã hoặc gõ chữ bất kỳ trên chart): tab Tất cả / Crypto / Forex / Hàng hoá, toàn bộ cặp Binance + forex & kim loại OANDA
 - Watchlist: nút **+** thêm mã, **×** xoá mã, giá realtime (Binance WebSocket, OANDA hỏi định kỳ), lưu trong trình duyệt
@@ -109,6 +111,7 @@ Token chỉ được lưu trong localStorage của trình duyệt.
 | `Shift + click` | Bắt đầu thước đo (click lần nữa để chốt, click tiếp / `Esc` để xoá) |
 | `Delete` | Xoá hình vẽ đang chọn |
 | `Ctrl + Z` / `Ctrl + Y` (`Ctrl + Shift + Z`) | Undo / Redo hình vẽ |
+| `Ctrl + C` / `Ctrl + Alt + S` | Chép ảnh HD biểu đồ đang chọn vào bộ nhớ tạm (khi không bôi đen chữ) |
 | `Shift + ↓` | Replay: Play / Pause |
 | `Shift + →` | Replay: tiến 1 nến |
 | `Esc` | Huỷ: chọn điểm replay → công cụ vẽ → hình đang chọn |

@@ -30,7 +30,8 @@ import {
   translateDrawing,
 } from '../lib/drawings'
 import { snapPositionPoints, tickSize } from '../lib/position'
-import { formatPrice, formatVolume, pricePrecision } from '../lib/intervals'
+import { formatPrice, formatVolume, intervalLabel, pricePrecision } from '../lib/intervals'
+import { captureChart, composeSnapshot, registerSnapshot, type SnapshotInfo } from '../lib/snapshot'
 import { computeRsi } from '../lib/rsi'
 import { theme } from '../lib/theme'
 import { logicalToTime, timeToLogical } from '../lib/timeIndex'
@@ -191,6 +192,44 @@ export function Chart({ index }: { index: number }) {
         rsiRef.current.update(point)
         setRsiLast(point.value)
       }
+    }
+  }
+
+  /** Dòng tiêu đề cho ảnh chụp: mã, khung, nguồn, OHLC nến cuối và nhãn pane RSI */
+  const snapshotInfo = (): SnapshotInfo => {
+    const { symbol, interval, feedName } = store.getState()
+    const lang = useAppStore.getState().language
+    const data = visibleData()
+    const bar = data.at(-1)
+    const prev = data.at(-2)
+    const precision = pricePrecision(bar?.close ?? 1, symbolPrecision(symbol))
+    const fmt = (v: number) => formatPrice(v, precision)
+    const diff = bar && prev ? bar.close - prev.close : null
+    const sign = diff !== null && diff >= 0 ? '+' : ''
+    const panes: SnapshotInfo['panes'] = []
+    const rsiPane = chartRef.current?.panes()[1]?.getHTMLElement()
+    const container = containerRef.current
+    if (rsiRef.current && rsiPane && container) {
+      const value = computeRsi(data, RSI_PERIOD).at(-1)?.value
+      panes.push({
+        y: rsiPane.getBoundingClientRect().top - container.getBoundingClientRect().top,
+        text: `${translate(lang, 'indicator.rsiLegend', { period: RSI_PERIOD })}  ${value?.toFixed(2) ?? '—'}`,
+        color: RSI_COLOR,
+      })
+    }
+    return {
+      title: `${symbol} · ${intervalLabel(interval)} · ${feedName}`,
+      ohlc: bar
+        ? [
+            [translate(lang, 'legend.o'), fmt(bar.open)],
+            [translate(lang, 'legend.h'), fmt(bar.high)],
+            [translate(lang, 'legend.l'), fmt(bar.low)],
+            [translate(lang, 'legend.c'), fmt(bar.close)],
+          ]
+        : [],
+      change: diff !== null && prev ? `${sign}${fmt(diff)} (${sign}${((diff / prev.close) * 100).toFixed(2)}%)` : null,
+      up: !bar || bar.close >= bar.open,
+      panes,
     }
   }
 
@@ -560,11 +599,10 @@ export function Chart({ index }: { index: number }) {
         const logical = chart.timeScale().coordinateToLogical(x) ?? 0
         const end = logicalToTime(Math.round(logical) + POSITION_BARS, dataRef.current) ?? point.time
         finish(
-          snapPositionPoints([
-            entry,
-            { time: end, price: entry.price + dir * 2 * risk },
-            { time: end, price: entry.price - dir * risk },
-          ], symPrecision),
+          snapPositionPoints(
+            [entry, { time: end, price: entry.price + dir * 2 * risk }, { time: end, price: entry.price - dir * risk }],
+            symPrecision,
+          ),
         )
       } else if (ONE_CLICK_TOOLS.includes(tool)) finish([point])
       else if (!pendingRef.current) {
@@ -668,7 +706,18 @@ export function Chart({ index }: { index: number }) {
 
     chart.subscribeCrosshairMove(onMove)
 
+    // Chụp ảnh HD biểu đồ này (nút 📷 / Ctrl + C khi đây là biểu đồ đang chọn)
+    const unregisterSnapshot = registerSnapshot(index, async () => {
+      const el = containerRef.current
+      if (!el || chartRef.current !== chart) return null
+      const canvas = composeSnapshot(await captureChart(chart, el), el.getBoundingClientRect().width, snapshotInfo())
+      const { symbol, interval } = store.getState()
+      canvas.dataset.name = `${symbol}_${intervalLabel(interval)}`
+      return canvas
+    })
+
     return () => {
+      unregisterSnapshot()
       container.removeEventListener('pointerdown', onPointerDown)
       container.removeEventListener('click', onDomClick)
       container.removeEventListener('dblclick', onDblClick)

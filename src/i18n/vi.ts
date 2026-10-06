@@ -8,6 +8,13 @@ export const vi: Record<keyof typeof en, string> = {
 
   'toolbar.symbolSearch': 'Tìm kiếm mã',
   'toolbar.dataSources': 'Nguồn dữ liệu',
+  'toolbar.snapshot': 'Chụp ảnh biểu đồ',
+  'snapshot.copy': 'Sao chép ảnh biểu đồ',
+  'snapshot.download': 'Tải ảnh xuống',
+  'snapshot.copied': 'Đã sao chép ảnh biểu đồ — nhấn Ctrl+V để dán',
+  'snapshot.downloaded': 'Đã tải ảnh biểu đồ xuống',
+  'snapshot.downloadedInstead': 'Trình duyệt chặn bộ nhớ tạm nên ảnh đã được tải xuống',
+  'snapshot.failed': 'Không chụp được ảnh biểu đồ',
   'toolbar.layout': 'Chọn bố cục',
   'layout.single': 'Một biểu đồ',
   'layout.charts': '{n} biểu đồ',

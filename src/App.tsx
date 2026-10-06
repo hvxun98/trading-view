@@ -3,6 +3,7 @@ import { DrawingToolbar } from './components/DrawingToolbar'
 import { ReplayBar } from './components/ReplayBar'
 import { RightPanel } from './components/RightPanel'
 import { TopToolbar } from './components/TopToolbar'
+import { Toaster } from './components/Toaster'
 import { useHotkeys } from './hooks/useHotkeys'
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
         </div>
         <RightPanel />
       </main>
+      <Toaster />
     </div>
   )
 }

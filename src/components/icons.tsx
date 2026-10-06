@@ -109,3 +109,10 @@ export function LineSample({ width, dash }: { width: number; dash: number[] }) {
     </svg>
   )
 }
+
+export const CameraIcon = () => (
+  <Icon>
+    <path d="M2.5 6.5a1.5 1.5 0 0 1 1.5-1.5h2l1.2-2h3.6l1.2 2h2a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5H4a1.5 1.5 0 0 1-1.5-1.5z" />
+    <circle cx="9" cy="10" r="2.8" />
+  </Icon>
+)

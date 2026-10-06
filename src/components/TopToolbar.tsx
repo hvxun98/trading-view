@@ -5,8 +5,9 @@ import { LAYOUTS, layoutInfo, type LayoutInfo } from '../lib/layouts'
 import { useAppStore } from '../store/useAppStore'
 import { useChartStore } from '../store/useChartStore'
 import type { Lang } from '../types'
+import { copyChartImage, downloadChartImage } from '../lib/snapshotActions'
 import { DataSourceDialog } from './DataSourceDialog'
-import { GlobeIcon, RedoIcon, SettingsIcon, UndoIcon } from './icons'
+import { CameraIcon, GlobeIcon, RedoIcon, SettingsIcon, UndoIcon } from './icons'
 import { SymbolSearchDialog } from './SymbolSearchDialog'
 
 const LANGS: Lang[] = ['en', 'vi']
@@ -29,6 +30,7 @@ export function TopToolbar() {
   } = useChartStore()
   const { language, setLanguage, layout, setLayout } = useAppStore()
   const [layoutOpen, setLayoutOpen] = useState(false)
+  const [snapOpen, setSnapOpen] = useState(false)
   const t = useT()
   const [langOpen, setLangOpen] = useState(false)
   const canUndo = useChartStore((s) => s.undoStack.length > 0)
@@ -126,6 +128,42 @@ export function TopToolbar() {
       </button>
 
       <div className="toolbar-spacer" />
+
+      <div className="menu-anchor">
+        <button
+          className={`tb-btn tb-icon snapshot-btn ${snapOpen ? 'active' : ''}`}
+          onClick={() => setSnapOpen((v) => !v)}
+          onBlur={() => setTimeout(() => setSnapOpen(false), 150)}
+          title={t('toolbar.snapshot')}
+        >
+          <CameraIcon />
+        </button>
+        {snapOpen && (
+          <ul className="symbol-dropdown snapshot-menu">
+            <li
+              data-action="copy"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                setSnapOpen(false)
+                copyChartImage()
+              }}
+            >
+              {t('snapshot.copy')}
+              <kbd>Ctrl+C</kbd>
+            </li>
+            <li
+              data-action="download"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                setSnapOpen(false)
+                downloadChartImage()
+              }}
+            >
+              {t('snapshot.download')}
+            </li>
+          </ul>
+        )}
+      </div>
 
       <div className="menu-anchor">
         <button
