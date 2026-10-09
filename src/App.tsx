@@ -4,10 +4,12 @@ import { ReplayBar } from './components/ReplayBar'
 import { RightPanel } from './components/RightPanel'
 import { TopToolbar } from './components/TopToolbar'
 import { Toaster } from './components/Toaster'
+import { useDeepLink } from './hooks/useDeepLink'
 import { useHotkeys } from './hooks/useHotkeys'
 
 export default function App() {
   useHotkeys()
+  useDeepLink()
 
   return (
     <div className="app">

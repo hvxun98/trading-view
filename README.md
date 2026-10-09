@@ -62,6 +62,13 @@ Khi bật, MT5 được ưu tiên trước OANDA và Dukascopy.
 
 Token chỉ được lưu trong localStorage của trình duyệt.
 
+## Hệ thống cảnh báo (alerts/)
+
+Robot chạy 24/24 trên Cloudflare Workers (miễn phí), theo dõi XAUUSD và BTC theo quy tắc trong `alerts/src/config.ts`
+và gửi gợi ý vào lệnh (entry, SL, TP, các điều kiện đạt / chưa đạt) qua Telegram / ntfy. Link "Mở chart" trong tin nhắn
+mở app ở đúng mã / khung với vị thế vẽ sẵn (`?symbol=XAUUSD&interval=1h&side=long&entry=…&sl=…&tp=…&t=…`).
+Có backtest dùng chung bộ chấm điểm. Hướng dẫn cài đặt: [alerts/README.md](alerts/README.md).
+
 ## Tính năng hiện có
 
 - **Nhiều biểu đồ** (nút bố cục ở góc phải toolbar): 1, 2 cột, 2 hàng, 3 cột, 1 lớn + 2 nhỏ, 2×2. Mỗi biểu đồ có

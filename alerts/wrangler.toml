@@ -1,0 +1,23 @@
+# Cloudflare Worker cho hệ thống cảnh báo (gói Free: cron mỗi phút, D1 5 GB)
+name = "trading-alerts"
+main = "src/worker.ts"
+compatibility_date = "2026-09-01"
+
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "trading-alerts"
+# Thay bằng id in ra sau lệnh: npx wrangler d1 create trading-alerts
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[vars]
+APP_URL = "https://trading-view-hvxun.vercel.app"
+TIMEZONE = "Asia/Ho_Chi_Minh"
+# Giờ yên lặng (theo TIMEZONE), vd. "23-7": ban đêm chỉ gửi tín hiệu "gợi ý vào lệnh"
+QUIET_HOURS = ""
+# Nguồn giá vàng: auto | oanda | dukascopy | binance-futures
+GOLD_SOURCE = "auto"
+# Bí mật (không ghi vào file này): npx wrangler secret put TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID / API_KEY
+# Tuỳ chọn: NTFY_TOPIC, OANDA_TOKEN

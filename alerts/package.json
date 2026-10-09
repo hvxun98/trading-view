@@ -1,0 +1,20 @@
+{
+  "name": "trading-view-alerts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute trading-alerts --remote --file=schema.sql",
+    "db:init:local": "wrangler d1 execute trading-alerts --local --file=schema.sql",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "backtest": "tsx scripts/backtest.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.2",
+    "wrangler": "^4.149.0"
+  }
+}

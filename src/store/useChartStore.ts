@@ -26,6 +26,8 @@ export interface ChartState {
   replayTime: number | null
   /** Tăng mỗi lần yêu cầu đặt lại chế độ xem */
   resetViewNonce: number
+  /** Cuộn tới thời điểm này (giây) khi dữ liệu sẵn sàng, vd. mở từ link cảnh báo */
+  focusTime: number | null
 
   /** Đảo ngược thang giá (Invert scale) */
   invertScale: boolean
@@ -55,6 +57,7 @@ export interface ChartState {
   jumpReplayTo: (time: number) => void
   setReplayTime: (time: number | null) => void
   resetView: () => void
+  focusOn: (time: number | null) => void
 
   toggleInvertScale: () => void
   toggleRsi: () => void
@@ -134,6 +137,7 @@ const createChartStore = (index: number): ChartStore =>
         replayJump: null,
         replayTime: null,
         resetViewNonce: 0,
+        focusTime: null,
 
         invertScale: false,
         rsiEnabled: false,
@@ -161,6 +165,7 @@ const createChartStore = (index: number): ChartStore =>
           set((s) => ({ replayJump: { time, nonce: (s.replayJump?.nonce ?? 0) + 1 }, replayPlaying: false })),
         setReplayTime: (replayTime) => set({ replayTime }),
         resetView: () => set((s) => ({ resetViewNonce: s.resetViewNonce + 1 })),
+        focusOn: (focusTime) => set({ focusTime }),
 
         toggleInvertScale: () => set((s) => ({ invertScale: !s.invertScale })),
         toggleRsi: () => set((s) => ({ rsiEnabled: !s.rsiEnabled })),

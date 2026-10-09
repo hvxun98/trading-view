@@ -400,6 +400,23 @@ export function Chart({ index }: { index: number }) {
     return task
   }
 
+  /** Cuộn để thời điểm `focusTime` (vd. nến tín hiệu từ link cảnh báo) nằm khoảng 60% bề ngang, tải thêm lịch sử nếu cần */
+  const applyFocus = async () => {
+    const time = store.getState().focusTime
+    const ts = chartRef.current?.timeScale()
+    if (time === null || !ts || switchingRef.current || !dataRef.current.length) return
+    store.getState().focusOn(null)
+    for (let page = 0; page < MAX_JUMP_PAGES; page++) {
+      const first = dataRef.current[0]
+      if (!first || first.time <= time || !(await loadOlder())) break
+    }
+    const logical = timeToLogical(time, dataRef.current)
+    if (logical === null) return
+    const range = ts.getVisibleLogicalRange()
+    const span = range ? range.to - range.from : 120
+    ts.setVisibleLogicalRange({ from: logical - span * 0.6, to: logical + span * 0.4 })
+  }
+
   // 1. Khởi tạo chart một lần
   useEffect(() => {
     const chart = createChart(containerRef.current!, {
@@ -815,6 +832,8 @@ export function Chart({ index }: { index: number }) {
         if (cancelled) return
         restoreView(view)
       }
+      await applyFocus()
+      if (cancelled) return
 
       unsubscribe = feed.subscribeBars(symbol, interval, (bar) => {
         const arr = dataRef.current
@@ -873,6 +892,13 @@ export function Chart({ index }: { index: number }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, interval, sourcesKeyValue])
+
+  // Mở từ link cảnh báo khi dữ liệu đã có sẵn (cùng mã / khung): cuộn ngay
+  const focusTime = useChartStore((s) => s.focusTime)
+  useEffect(() => {
+    applyFocus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTime])
 
   // 3. Cuộn sang trái gần hết dữ liệu -> tải thêm lịch sử; theo dõi đã cuộn khỏi realtime chưa
   useEffect(() => {
