@@ -1,12 +1,12 @@
 import { createContext, useContext } from 'react'
 import { create, useStore, type StoreApi, type UseBoundStore } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import type { AnchorPoint, Drawing, DrawingStyle, Interval, ReplayMode, Tool } from '../types'
+import type { AnchorPoint, Drawing, DrawingStyle, Indicator, IndicatorType, Interval, ReplayMode, Tool } from '../types'
 import { chartKey, useAppStore } from './useAppStore'
 
 /**
  * Trạng thái RIÊNG của từng biểu đồ trong bố cục nhiều biểu đồ: mã, khung thời gian, hình vẽ, công cụ vẽ,
- * undo/redo, RSI, đảo thang, replay… Mỗi biểu đồ một store, lưu ở localStorage 'tv-clone-chart-<i>'.
+ * undo/redo, chỉ báo, đảo thang, replay… Mỗi biểu đồ một store, lưu ở localStorage 'tv-clone-chart-<i>'.
  */
 export interface ChartState {
   symbol: string
@@ -29,7 +29,8 @@ export interface ChartState {
 
   /** Đảo ngược thang giá (Invert scale) */
   invertScale: boolean
-  rsiEnabled: boolean
+  /** Chỉ báo của biểu đồ (giữ nguyên khi đổi mã / khung thời gian, như TradingView) */
+  indicators: Indicator[]
 
   activeTool: Tool
   /** Hình vẽ theo từng symbol (giữ nguyên khi đổi khung thời gian, như TradingView) */
@@ -57,7 +58,14 @@ export interface ChartState {
   resetView: () => void
 
   toggleInvertScale: () => void
-  toggleRsi: () => void
+  /** Thêm chỉ báo với cài đặt mặc định (kể cả mặc định người dùng đã lưu) */
+  addIndicator: (type: IndicatorType) => void
+  /** Thêm bản sao ngay sau chỉ báo gốc */
+  duplicateIndicator: (id: string) => void
+  removeIndicator: (id: string) => void
+  removeAllIndicators: () => void
+  updateIndicator: (id: string, patch: Partial<Omit<Indicator, 'id' | 'type'>>) => void
+  toggleIndicatorHidden: (id: string) => void
 
   setTool: (tool: Tool) => void
   addDrawing: (drawing: Drawing) => void
@@ -136,7 +144,7 @@ const createChartStore = (index: number): ChartStore =>
         resetViewNonce: 0,
 
         invertScale: false,
-        rsiEnabled: false,
+        indicators: [],
 
         activeTool: 'cursor',
         drawings: {},
@@ -163,7 +171,24 @@ const createChartStore = (index: number): ChartStore =>
         resetView: () => set((s) => ({ resetViewNonce: s.resetViewNonce + 1 })),
 
         toggleInvertScale: () => set((s) => ({ invertScale: !s.invertScale })),
-        toggleRsi: () => set((s) => ({ rsiEnabled: !s.rsiEnabled })),
+        addIndicator: (type) =>
+          set((s) => {
+            const defaults = useAppStore.getState().indicatorDefaults[type]
+            return { indicators: [...s.indicators, { ...structuredClone(defaults), id: crypto.randomUUID(), type }] }
+          }),
+        duplicateIndicator: (id) =>
+          set((s) => {
+            const i = s.indicators.findIndex((x) => x.id === id)
+            if (i < 0) return {}
+            const copy = { ...structuredClone(s.indicators[i]), id: crypto.randomUUID() }
+            return { indicators: [...s.indicators.slice(0, i + 1), copy, ...s.indicators.slice(i + 1)] }
+          }),
+        removeIndicator: (id) => set((s) => ({ indicators: s.indicators.filter((i) => i.id !== id) })),
+        removeAllIndicators: () => set({ indicators: [] }),
+        updateIndicator: (id, patch) =>
+          set((s) => ({ indicators: s.indicators.map((i) => (i.id === id ? { ...i, ...patch } : i)) })),
+        toggleIndicatorHidden: (id) =>
+          set((s) => ({ indicators: s.indicators.map((i) => (i.id === id ? { ...i, hidden: !i.hidden } : i)) })),
 
         setTool: (activeTool) =>
           set((s) => ({
@@ -231,12 +256,22 @@ const createChartStore = (index: number): ChartStore =>
       {
         name: chartKey(index),
         storage: createJSONStorage(() => localStorage),
+        // v0 chỉ có công tắc RSI -> v1 danh sách chỉ báo
+        version: 1,
+        migrate: (persisted, version) => {
+          const state = persisted as Partial<ChartState> & { rsiEnabled?: boolean }
+          if (version < 1) {
+            const { rsiEnabled, ...rest } = state
+            return { ...rest, indicators: rsiEnabled ? [{ id: crypto.randomUUID(), type: 'rsi' }] : [] }
+          }
+          return state
+        },
         // Chỉ lưu cài đặt & hình vẽ, không lưu trạng thái replay
         partialize: (s) => ({
           symbol: s.symbol,
           interval: s.interval,
           invertScale: s.invertScale,
-          rsiEnabled: s.rsiEnabled,
+          indicators: s.indicators,
           drawings: s.drawings,
           lockAll: s.lockAll,
           hideAll: s.hideAll,

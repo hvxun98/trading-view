@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { formatPrice, formatVolume, intervalLabel, pricePrecision } from '../lib/intervals'
 import { theme } from '../lib/theme'
 import { useT } from '../i18n'
@@ -8,9 +9,11 @@ import type { Candle } from '../types'
 interface Props {
   candle: Candle | null
   prevClose: number | null
+  /** Dòng legend của các chỉ báo trên chart giá */
+  children?: ReactNode
 }
 
-export function Legend({ candle, prevClose }: Props) {
+export function Legend({ candle, prevClose, children }: Props) {
   const { symbol, interval, feedName, feedReconnecting } = useChartStore()
   const t = useT()
 
@@ -55,6 +58,7 @@ export function Legend({ candle, prevClose }: Props) {
           <i>{t('legend.vol')}</i> <span style={{ color }}>{formatVolume(candle.volume)}</span>
         </div>
       )}
+      {children}
     </div>
   )
 }

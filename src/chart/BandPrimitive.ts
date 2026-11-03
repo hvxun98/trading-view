@@ -8,28 +8,32 @@ import type {
   Time,
 } from 'lightweight-charts'
 
-/** Tô nền giữa hai mức giá trên toàn chiều ngang pane (vùng 30–70 của RSI) */
+export interface Band {
+  low: number
+  high: number
+  color: string
+}
+
+/**
+ * Tô nền giữa hai mức giá trên toàn chiều ngang pane (vd. vùng 30–70 của RSI).
+ * `band()` đọc mức / màu hiện tại (người dùng sửa được trong Settings); null = không vẽ.
+ */
 export class BandPrimitive implements ISeriesPrimitive<Time> {
   private series: ISeriesApi<SeriesType, Time> | null = null
   private readonly views: IPrimitivePaneView[]
-  private readonly low: number
-  private readonly high: number
-  private readonly color: string
 
-  constructor(low: number, high: number, color: string) {
-    this.low = low
-    this.high = high
-    this.color = color
+  constructor(band: () => Band | null) {
     const renderer: IPrimitivePaneRenderer = {
       draw: () => {},
       drawBackground: (target) => {
         const series = this.series
-        if (!series) return
-        const y1 = series.priceToCoordinate(this.high)
-        const y2 = series.priceToCoordinate(this.low)
+        const b = band()
+        if (!series || !b) return
+        const y1 = series.priceToCoordinate(b.high)
+        const y2 = series.priceToCoordinate(b.low)
         if (y1 === null || y2 === null) return
         target.useMediaCoordinateSpace(({ context, mediaSize }) => {
-          context.fillStyle = this.color
+          context.fillStyle = b.color
           context.fillRect(0, Math.min(y1, y2), mediaSize.width, Math.abs(y2 - y1))
         })
       },

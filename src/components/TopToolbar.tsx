@@ -7,6 +7,7 @@ import { useChartStore } from '../store/useChartStore'
 import type { Lang } from '../types'
 import { copyChartImage, downloadChartImage } from '../lib/snapshotActions'
 import { DataSourceDialog } from './DataSourceDialog'
+import { IndicatorsDialog } from './IndicatorsDialog'
 import { CameraIcon, GlobeIcon, RedoIcon, SettingsIcon, UndoIcon } from './icons'
 import { SymbolSearchDialog } from './SymbolSearchDialog'
 
@@ -18,13 +19,11 @@ export function TopToolbar() {
     interval,
     replayMode,
     invertScale,
-    rsiEnabled,
     setInterval,
     startReplaySelect,
     exitReplay,
     resetView,
     toggleInvertScale,
-    toggleRsi,
     undo,
     redo,
   } = useChartStore()
@@ -40,12 +39,18 @@ export function TopToolbar() {
   const [search, setSearch] = useState<string | null>(null)
   const [dataOpen, setDataOpen] = useState(false)
 
-  // Như TradingView: gõ chữ / số khi đang xem chart là mở ngay hộp thoại tìm mã
+  // Như TradingView: gõ chữ / số khi đang xem chart là mở ngay hộp thoại tìm mã, phím "/" mở hộp thoại chỉ báo
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1 || !/[a-z0-9]/i.test(e.key)) return
+      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return
       const target = e.target as HTMLElement
       if (target.closest('input, textarea, select, [role="dialog"]')) return
+      if (e.key === '/') {
+        e.preventDefault()
+        setIndicatorsOpen(true)
+        return
+      }
+      if (!/[a-z0-9]/i.test(e.key)) return
       e.preventDefault()
       setSearch(e.key.toUpperCase())
     }
@@ -78,23 +83,14 @@ export function TopToolbar() {
 
       <div className="divider" />
 
-      <div className="menu-anchor">
-        <button
-          className={`tb-btn ${indicatorsOpen ? 'active' : ''}`}
-          onClick={() => setIndicatorsOpen((v) => !v)}
-          onBlur={() => setTimeout(() => setIndicatorsOpen(false), 150)}
-          title={t('toolbar.indicators')}
-        >
-          <i className="fx">ƒx</i> {t('toolbar.indicators')}
-        </button>
-        {indicatorsOpen && (
-          <ul className="symbol-dropdown">
-            <li onMouseDown={toggleRsi}>
-              {rsiEnabled ? '✓' : '\u2003'} {t('indicator.rsi')}
-            </li>
-          </ul>
-        )}
-      </div>
+      <button
+        className={`tb-btn ${indicatorsOpen ? 'active' : ''}`}
+        onClick={() => setIndicatorsOpen(true)}
+        title={`${t('toolbar.indicators')} (/)`}
+      >
+        <i className="fx">ƒx</i> {t('toolbar.indicators')}
+      </button>
+      {indicatorsOpen && <IndicatorsDialog onClose={() => setIndicatorsOpen(false)} />}
 
       <div className="divider" />
 
