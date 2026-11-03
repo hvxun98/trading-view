@@ -4,7 +4,6 @@ import {
   ColorType,
   CrosshairMode,
   HistogramSeries,
-  LineSeries,
   LineStyle,
   createChart,
   type IChartApi,
@@ -14,8 +13,8 @@ import {
   type MouseEventParams,
   type Time,
 } from 'lightweight-charts'
-import { BandPrimitive } from '../chart/BandPrimitive'
 import { DrawingsPrimitive } from '../chart/DrawingsPrimitive'
+import { IndicatorLayer } from '../chart/IndicatorLayer'
 import { binanceFeed, isPermanentError } from '../data/binance'
 import { symbolPrecision } from '../data/catalog'
 import { feedsFor, sourcesKey } from '../data/feeds'
@@ -32,13 +31,15 @@ import {
 import { snapPositionPoints, tickSize } from '../lib/position'
 import { formatPrice, formatVolume, intervalLabel, pricePrecision } from '../lib/intervals'
 import { captureChart, composeSnapshot, registerSnapshot, type SnapshotInfo } from '../lib/snapshot'
-import { computeRsi } from '../lib/rsi'
+import { formatIndicatorValue, indicatorDef, indicatorLabel, plotStyle, visibleOn } from '../lib/indicators'
 import { theme } from '../lib/theme'
 import { logicalToTime, timeToLogical } from '../lib/timeIndex'
 import { useAppStore } from '../store/useAppStore'
 import { useChartStore, useChartStoreApi } from '../store/useChartStore'
 import type { AnchorPoint, Candle, DataFeed, Drawing, DrawingTool, Lang } from '../types'
 import { DrawingFloatToolbar } from './DrawingFloatToolbar'
+import { IndicatorLegendRow } from './IndicatorLegend'
+import { IndicatorSettingsDialog } from './IndicatorSettingsDialog'
 import { PositionSettingsDialog } from './PositionSettingsDialog'
 import { TextEditor } from './TextEditor'
 import { translate, useT } from '../i18n'
@@ -49,8 +50,6 @@ const BAR_SPACING = 8
 const RIGHT_OFFSET = 10
 /** Giới hạn số trang lịch sử tải thêm khi nhảy tới một ngày cũ */
 const MAX_JUMP_PAGES = 50
-const RSI_PERIOD = 14
-const RSI_COLOR = '#7e57c2'
 /** Công cụ chỉ cần 1 click */
 const ONE_CLICK_TOOLS: DrawingTool[] = ['hline', 'vline']
 /** Vị thế mua/bán mặc định: cắt lỗ cách entry 40px, chốt lời gấp đôi (R:R = 2), rộng 20 nến */
@@ -89,7 +88,7 @@ export function Chart({ index }: { index: number }) {
   const chartRef = useRef<IChartApi | null>(null)
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const volumeRef = useRef<ISeriesApi<'Histogram'> | null>(null)
-  const rsiRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const indicatorsRef = useRef<IndicatorLayer | null>(null)
   const drawingsRef = useRef<DrawingsPrimitive | null>(null)
   /** Điểm neo đầu tiên của hình vẽ 2 điểm đang vẽ dở */
   const pendingRef = useRef<AnchorPoint | null>(null)
@@ -112,9 +111,14 @@ export function Chart({ index }: { index: number }) {
   const [selectOverlay, setSelectOverlay] = useState<SelectOverlay | null>(null)
   const [scrolledBack, setScrolledBack] = useState(false)
   const [menu, setMenu] = useState<{ x: number; y: number; drawingId: string | null } | null>(null)
-  const [rsiHovered, setRsiHovered] = useState<number | null>(null)
-  const [rsiLast, setRsiLast] = useState<number | null>(null)
-  const [rsiTop, setRsiTop] = useState<number | null>(null)
+  /** Nến đang rê chuột (logical index) cho giá trị trên legend chỉ báo; null = nến cuối */
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null)
+  /** Vị trí đỉnh pane của từng chỉ báo pane riêng (để đặt legend), theo id chỉ báo */
+  const [paneTops, setPaneTops] = useState<Record<string, number>>({})
+  /** Tăng sau khi lớp chỉ báo đổi (thêm / sửa) để legend đọc lại giá trị */
+  const [, setLayerVersion] = useState(0)
+  /** Chỉ báo đang mở hộp thoại Settings */
+  const [indicatorSettingsId, setIndicatorSettingsId] = useState<string | null>(null)
   const [editor, setEditor] = useState<EditorState | null>(null)
   /** Vị thế đang mở hộp thoại Settings */
   const [settingsId, setSettingsId] = useState<string | null>(null)
@@ -129,7 +133,7 @@ export function Chart({ index }: { index: number }) {
     replayJump,
     resetViewNonce,
     invertScale,
-    rsiEnabled,
+    indicators,
     activeTool,
     selectedDrawingId,
     lockAll,
@@ -153,7 +157,6 @@ export function Chart({ index }: { index: number }) {
     setReplayTime,
     resetView,
     toggleInvertScale,
-    toggleRsi,
     clearDrawings,
     addDrawing,
     removeDrawing,
@@ -170,12 +173,8 @@ export function Chart({ index }: { index: number }) {
   const render = (data: Candle[]) => {
     candleRef.current?.setData(data)
     volumeRef.current?.setData(data.map(volumeBar))
+    indicatorsRef.current?.setData(data)
     setLast(data.at(-1) ?? null)
-    if (rsiRef.current) {
-      const rsi = computeRsi(data, RSI_PERIOD)
-      rsiRef.current.setData(rsi)
-      setRsiLast(rsi.at(-1)?.value ?? null)
-    }
     drawingsRef.current?.refresh()
   }
 
@@ -183,19 +182,13 @@ export function Chart({ index }: { index: number }) {
   const pushBar = (bar: Candle, data: Candle[]) => {
     candleRef.current?.update(bar)
     volumeRef.current?.update(volumeBar(bar))
+    indicatorsRef.current?.update(data)
     setLast(bar)
     // P&L của vị thế thay đổi theo giá mới
     drawingsRef.current?.refresh()
-    if (rsiRef.current) {
-      const point = computeRsi(data, RSI_PERIOD).at(-1)
-      if (point) {
-        rsiRef.current.update(point)
-        setRsiLast(point.value)
-      }
-    }
   }
 
-  /** Dòng tiêu đề cho ảnh chụp: mã, khung, nguồn, OHLC nến cuối và nhãn pane RSI */
+  /** Dòng tiêu đề cho ảnh chụp: mã, khung, nguồn, OHLC nến cuối và nhãn các chỉ báo */
   const snapshotInfo = (): SnapshotInfo => {
     const { symbol, interval, feedName } = store.getState()
     const lang = useAppStore.getState().language
@@ -207,14 +200,27 @@ export function Chart({ index }: { index: number }) {
     const diff = bar && prev ? bar.close - prev.close : null
     const sign = diff !== null && diff >= 0 ? '+' : ''
     const panes: SnapshotInfo['panes'] = []
-    const rsiPane = chartRef.current?.panes()[1]?.getHTMLElement()
+    const layer = indicatorsRef.current
     const container = containerRef.current
-    if (rsiRef.current && rsiPane && container) {
-      const value = computeRsi(data, RSI_PERIOD).at(-1)?.value
+    const top = container?.getBoundingClientRect().top ?? 0
+    const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) =>
+      translate(lang, key, params)
+    // Chỉ báo trên chart giá xếp dòng từ đỉnh ảnh; chỉ báo pane riêng ở đỉnh pane của nó
+    let overlayRow = 0
+    for (const ind of store.getState().indicators) {
+      const pane = layer?.paneOf(ind.id)
+      if (!layer || !pane || ind.hidden || !visibleOn(ind, interval)) continue
+      const def = indicatorDef(ind.type)
+      const values = layer.valuesAt(ind.id, null)
+      const shown = def.plots.filter((p) => plotStyle(ind, p).visible)
+      const texts = ind.showValues === false ? [] : shown.map((p) => values[def.plots.indexOf(p)])
       panes.push({
-        y: rsiPane.getBoundingClientRect().top - container.getBoundingClientRect().top,
-        text: `${translate(lang, 'indicator.rsiLegend', { period: RSI_PERIOD })}  ${value?.toFixed(2) ?? '—'}`,
-        color: RSI_COLOR,
+        y: def.overlay ? overlayRow++ * 18 : pane.getBoundingClientRect().top - top,
+        text: [
+          indicatorLabel(ind, t),
+          ...texts.map((v) => formatIndicatorValue(ind, v, layer.getPricePrecision())),
+        ].join('  '),
+        color: shown[0] ? plotStyle(ind, shown[0]).color : theme.text,
       })
     }
     return {
@@ -233,10 +239,22 @@ export function Chart({ index }: { index: number }) {
     }
   }
 
-  const measureRsiPane = () => {
-    const pane = chartRef.current?.panes()[1]?.getHTMLElement()
+  /** Đo lại đỉnh các pane chỉ báo (đổi kích thước, kéo vách ngăn pane, thêm / xoá pane) */
+  const measurePanes = () => {
+    const layer = indicatorsRef.current
     const container = containerRef.current
-    setRsiTop(pane && container ? pane.getBoundingClientRect().top - container.getBoundingClientRect().top : null)
+    if (!layer || !container) return
+    const top = container.getBoundingClientRect().top
+    const next: Record<string, number> = {}
+    for (const ind of store.getState().indicators) {
+      const pane = layer.paneOf(ind.id)
+      if (pane && !indicatorDef(ind.type).overlay) next[ind.id] = pane.getBoundingClientRect().top - top
+    }
+    setPaneTops((prev) => {
+      const keys = Object.keys(next)
+      const same = keys.length === Object.keys(prev).length && keys.every((k) => prev[k] === next[k])
+      return same ? prev : next
+    })
   }
 
   const startReplayAt = (idx: number) => {
@@ -451,6 +469,7 @@ export function Chart({ index }: { index: number }) {
     chartRef.current = chart
     candleRef.current = candles
     volumeRef.current = volume
+    indicatorsRef.current = new IndicatorLayer(chart)
     // Chỉ ở môi trường dev: cho test E2E đọc trạng thái chart
     if (import.meta.env.DEV) {
       const w = window as unknown as { __chart?: IChartApi; __charts?: IChartApi[] }
@@ -505,10 +524,9 @@ export function Chart({ index }: { index: number }) {
         }
       }
 
-      const rsiSeries = rsiRef.current
-      const rsiPoint = rsiSeries && param.time ? param.seriesData.get(rsiSeries) : undefined
-      setRsiHovered(rsiPoint && 'value' in rsiPoint ? (rsiPoint.value as number) : null)
-      if (rsiSeries) measureRsiPane()
+      setHoverIndex(param.point && param.logical !== undefined ? Math.round(param.logical) : null)
+      // Vách ngăn giữa các pane có thể vừa bị kéo
+      measurePanes()
 
       const bar = param.time ? param.seriesData.get(candles) : undefined
       if (!bar) {
@@ -706,6 +724,14 @@ export function Chart({ index }: { index: number }) {
 
     chart.subscribeCrosshairMove(onMove)
 
+    // Đo lại vị trí pane chỉ báo khi ô biểu đồ đổi kích thước (cửa sổ, đổi bố cục nhiều biểu đồ)
+    let raf = 0
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(measurePanes)
+    })
+    observer.observe(container)
+
     // Chụp ảnh HD biểu đồ này (nút 📷 / Ctrl + C khi đây là biểu đồ đang chọn)
     const unregisterSnapshot = registerSnapshot(index, async () => {
       const el = containerRef.current
@@ -718,6 +744,8 @@ export function Chart({ index }: { index: number }) {
 
     return () => {
       unregisterSnapshot()
+      cancelAnimationFrame(raf)
+      observer.disconnect()
       container.removeEventListener('pointerdown', onPointerDown)
       container.removeEventListener('click', onDomClick)
       container.removeEventListener('dblclick', onDblClick)
@@ -728,7 +756,7 @@ export function Chart({ index }: { index: number }) {
       chartRef.current = null
       candleRef.current = null
       volumeRef.current = null
-      rsiRef.current = null
+      indicatorsRef.current = null
       drawingsRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -798,6 +826,7 @@ export function Chart({ index }: { index: number }) {
       candleRef.current?.applyOptions({
         priceFormat: { type: 'price', precision, minMove: 1 / 10 ** precision },
       })
+      indicatorsRef.current?.setPricePrecision(precision)
 
       dataRef.current = data
       loadingOlderRef.current = null
@@ -972,75 +1001,19 @@ export function Chart({ index }: { index: number }) {
   // 8. Đảo ngược thang giá (Invert scale)
   useEffect(() => {
     chartRef.current?.priceScale('right').applyOptions({ invertScale })
-    // Đảo cả thang của pane RSI để hai pane cùng chiều
-    rsiRef.current?.priceScale().applyOptions({ invertScale })
+    // Đảo cả thang của các pane chỉ báo để mọi pane cùng chiều
+    indicatorsRef.current?.setInvertScale(invertScale)
   }, [invertScale])
 
-  // 9. Indicator RSI trong pane riêng bên dưới
+  // 9. Chỉ báo: đồng bộ store -> series / pane trên chart (khung thời gian cho tab Visibility)
   useEffect(() => {
-    const chart = chartRef.current
-    if (!chart || !rsiEnabled) return
-
-    const rsi = chart.addSeries(
-      LineSeries,
-      {
-        color: RSI_COLOR,
-        lineWidth: 1,
-        priceLineVisible: false,
-        priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
-        // Luôn hiển thị đủ vùng 30–70
-        autoscaleInfoProvider: (original: () => { priceRange: { minValue: number; maxValue: number } } | null) => {
-          const res = original()
-          if (!res) return res
-          return {
-            ...res,
-            priceRange: {
-              minValue: Math.min(res.priceRange.minValue, 30),
-              maxValue: Math.max(res.priceRange.maxValue, 70),
-            },
-          }
-        },
-      },
-      1,
-    )
-    // RSI bật sau khi đã đảo thang: cũng đảo luôn
-    rsi.priceScale().applyOptions({
-      scaleMargins: { top: 0.1, bottom: 0.1 },
-      invertScale: store.getState().invertScale,
-    })
-    rsi.attachPrimitive(new BandPrimitive(30, 70, 'rgba(126, 87, 194, 0.1)'))
-    for (const [price, style] of [
-      [70, LineStyle.Dashed],
-      [50, LineStyle.Dotted],
-      [30, LineStyle.Dashed],
-    ] as const) {
-      rsi.createPriceLine({ price, color: '#787b86', lineWidth: 1, lineStyle: style, axisLabelVisible: false })
-    }
-    chart.panes()[0]?.setStretchFactor(3)
-    chart.panes()[1]?.setStretchFactor(1)
-
-    rsiRef.current = rsi
-    const data = computeRsi(visibleData(), RSI_PERIOD)
-    rsi.setData(data)
-    setRsiLast(data.at(-1)?.value ?? null)
-    // Đo lại vị trí pane RSI khi ô biểu đồ đổi kích thước (cửa sổ, đổi bố cục nhiều biểu đồ)
-    let raf = requestAnimationFrame(measureRsiPane)
-    const observer = new ResizeObserver(() => {
-      cancelAnimationFrame(raf)
-      raf = requestAnimationFrame(measureRsiPane)
-    })
-    if (containerRef.current) observer.observe(containerRef.current)
-
-    return () => {
-      cancelAnimationFrame(raf)
-      observer.disconnect()
-      rsiRef.current = null
-      setRsiTop(null)
-      // Chart có thể đã bị huỷ trước (unmount)
-      if (chartRef.current === chart) chart.removeSeries(rsi)
-    }
+    indicatorsRef.current?.sync(indicators, interval)
+    setLayerVersion((v) => v + 1)
+    // Pane mới / bị xoá: chờ chart dựng lại bố cục rồi mới đo
+    const raf = requestAnimationFrame(measurePanes)
+    return () => cancelAnimationFrame(raf)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rsiEnabled])
+  }, [indicators, interval])
 
   // 10. Hình vẽ: đồng bộ từ store vào lớp vẽ; đổi công cụ thì huỷ hình đang vẽ dở
   useEffect(() => {
@@ -1102,6 +1075,18 @@ export function Chart({ index }: { index: number }) {
   }
 
   const settingsDrawing = drawings.find((d) => d.id === settingsId) ?? null
+  const settingsIndicator = indicators.find((i) => i.id === indicatorSettingsId) ?? null
+
+  const indicatorRow = (ind: (typeof indicators)[number]) => (
+    <IndicatorLegendRow
+      key={ind.id}
+      indicator={ind}
+      values={indicatorsRef.current?.valuesAt(ind.id, hoverIndex) ?? []}
+      prevValues={indicatorsRef.current?.valuesAt(ind.id, hoverIndex, 1) ?? []}
+      pricePrecision={indicatorsRef.current?.getPricePrecision() ?? 2}
+      onSettings={() => setIndicatorSettingsId(ind.id)}
+    />
+  )
 
   const editorStyle = editor
     ? styleOf(drawings.find((d) => d.id === editor.id) ?? { id: '', type: editor.type, points: [] })
@@ -1130,18 +1115,26 @@ export function Chart({ index }: { index: number }) {
       }}
     >
       <div ref={containerRef} className="chart" />
-      <Legend candle={shown} prevClose={shownPrev} />
+      <Legend candle={shown} prevClose={shownPrev}>
+        {indicators
+          .filter((ind) => indicatorDef(ind.type).overlay)
+          .map((ind) => indicatorRow(ind))}
+      </Legend>
 
-      {rsiEnabled && rsiTop !== null && (
-        <div className="legend pane-legend" style={{ top: rsiTop + 6 }}>
-          <div className="legend-ohlc">
-            <span className="legend-name">{t('indicator.rsiLegend', { period: RSI_PERIOD })}</span>
-            <span style={{ color: RSI_COLOR }}>{(rsiHovered ?? rsiLast)?.toFixed(2) ?? '—'}</span>
-            <button className="legend-remove" onClick={toggleRsi} title={t('indicator.remove')}>
-              ×
-            </button>
+      {indicators
+        .filter((ind) => !indicatorDef(ind.type).overlay && paneTops[ind.id] !== undefined)
+        .map((ind) => (
+          <div key={ind.id} className="legend pane-legend" style={{ top: paneTops[ind.id] + 6 }}>
+            {indicatorRow(ind)}
           </div>
-        </div>
+        ))}
+
+      {settingsIndicator && (
+        <IndicatorSettingsDialog
+          key={settingsIndicator.id}
+          indicator={settingsIndicator}
+          onClose={() => setIndicatorSettingsId(null)}
+        />
       )}
 
       {replayMode === 'selecting' && selectOverlay && (

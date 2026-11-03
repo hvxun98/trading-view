@@ -760,24 +760,279 @@ select {
 
 .legend-name {
   color: var(--text);
+  white-space: nowrap;
 }
 
-.legend-remove {
+/* Dòng legend của chỉ báo: rê chuột hiện nút ẩn / cài đặt / xoá như TradingView */
+.indicator-legend {
   pointer-events: auto;
-  width: 18px;
-  height: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 22px;
+  padding: 0 4px;
+  margin-left: -4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.indicator-legend:hover {
+  border-color: var(--border);
+  background: rgba(19, 23, 34, 0.85);
+}
+
+.indicator-legend .legend-name {
+  cursor: default;
+}
+
+.indicator-legend.is-hidden .legend-name {
+  color: var(--text-dim);
+}
+
+.legend-actions {
+  display: none;
+  gap: 2px;
+}
+
+.indicator-legend:hover .legend-actions,
+.indicator-legend.is-hidden .legend-actions {
+  display: flex;
+}
+
+.legend-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: none;
   border-radius: 3px;
   background: transparent;
   color: var(--text-dim);
+  font-size: 16px;
   line-height: 1;
   cursor: pointer;
 }
 
-.legend-remove:hover {
+.legend-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.legend-btn:hover {
   background: var(--hover);
   color: var(--text);
+}
+
+/* Hộp thoại Indicators */
+.indicators-dialog {
+  width: min(600px, calc(100vw - 32px));
+  height: min(520px, calc(100vh - 64px));
+}
+
+.indicators-dialog .search-input input {
+  text-transform: none;
+}
+
+.search-row.indicator-row {
+  grid-template-columns: 1fr auto 90px 40px;
+}
+
+.indicator-full {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.indicator-count {
+  color: var(--accent);
+  font-size: 12px;
+  text-align: right;
+}
+
+/* Hộp thoại Settings của chỉ báo */
+.dialog-tabs {
+  display: flex;
+  gap: 20px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dialog-tab {
+  height: 38px;
+  padding: 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.dialog-tab:hover {
+  color: var(--text);
+}
+
+.dialog-tab.active {
+  border-bottom-color: var(--text);
+  color: var(--text);
+}
+
+.indicator-dialog {
+  width: min(520px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  /* Thân hộp thoại tự cuộn; khung ngoài không cắt menu "Defaults" */
+  overflow: visible;
+}
+
+.indicator-body {
+  flex: 1;
+  min-height: 180px;
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+}
+
+.form-row input.invalid {
+  border-color: #f23645;
+}
+
+.form-check input[type='checkbox'] {
+  accent-color: var(--accent);
+}
+
+/* Một dòng của tab Style: [✓ tên] [màu] [kiểu vẽ] [độ dày] [kiểu nét] */
+.style-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.style-row .style-name {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.style-row select,
+.style-row input {
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+
+.style-row select:disabled {
+  opacity: 0.4;
+}
+
+.style-row select:focus,
+.style-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.style-row .level-price {
+  width: 90px;
+  font-variant-numeric: tabular-nums;
+}
+
+.style-row .level-price.invalid {
+  border-color: #f23645;
+}
+
+.style-auto {
+  width: 32px;
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+/* Ô màu: nền ca-rô để thấy độ trong suốt */
+.color-swatch {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: repeating-conic-gradient(#555 0 25%, #333 0 50%) 0 0 / 8px 8px;
+  cursor: pointer;
+}
+
+.color-swatch span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.color-popover {
+  position: fixed;
+  z-index: 100;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.color-popover .ft-palette-row {
+  justify-content: space-between;
+}
+
+.color-opacity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.color-opacity input {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--swatch, var(--accent));
+}
+
+.color-opacity-value {
+  width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.defaults-menu {
+  position: absolute;
+  top: auto;
+  bottom: calc(100% + 4px);
+  left: 0;
+  min-width: 200px;
+}
+
+.legend-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 190px;
+  font-size: 13px;
+}
+
+.indicator-legend.menu-open .legend-actions {
+  display: flex;
+}
+
+.btn-left {
+  margin-right: auto;
 }
 
 .context-menu li.disabled {
@@ -1437,4 +1692,15 @@ select {
 
 .toast-error {
   border-color: #f23645;
+}
+
+/* Giải thích tín hiệu trong tab Inputs (VSA) */
+.indicator-help {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.6;
 }

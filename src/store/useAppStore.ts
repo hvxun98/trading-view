@@ -5,7 +5,7 @@ import type { Mt5Config } from '../data/mt5'
 import type { OandaConfig } from '../data/oanda'
 import { detectLanguage } from '../i18n/detect'
 import { layoutInfo, type LayoutId } from '../lib/layouts'
-import type { Lang } from '../types'
+import type { IndicatorSettings, IndicatorType, Lang } from '../types'
 
 /** Trạng thái dùng chung toàn app; trạng thái riêng từng biểu đồ nằm trong useChartStore */
 interface AppState {
@@ -28,6 +28,8 @@ interface AppState {
    * (giữ đúng chỗ khi đổi kích thước); null = mặc định giữa, sát đáy
    */
   replayBarPos: { x: number; y: number } | null
+  /** Cài đặt người dùng đã "Save as default" cho từng loại chỉ báo (áp dụng khi thêm chỉ báo mới) */
+  indicatorDefaults: Partial<Record<IndicatorType, IndicatorSettings>>
 
   setLanguage: (language: Lang) => void
   addToWatchlist: (symbol: string) => void
@@ -38,6 +40,8 @@ interface AppState {
   setLayout: (layout: LayoutId) => void
   setActiveChart: (index: number) => void
   setReplayBarPos: (pos: { x: number; y: number } | null) => void
+  /** null = xoá mặc định đã lưu, về mặc định gốc */
+  setIndicatorDefaults: (type: IndicatorType, settings: IndicatorSettings | null) => void
 }
 
 export const APP_KEY = 'tv-clone'
@@ -80,6 +84,7 @@ export const useAppStore = create<AppState>()(
       layout: '1',
       activeChart: 0,
       replayBarPos: null,
+      indicatorDefaults: {},
 
       setLanguage: (language) => set({ language }),
       addToWatchlist: (symbol) =>
@@ -93,6 +98,13 @@ export const useAppStore = create<AppState>()(
         set((s) => ({ layout, activeChart: Math.min(s.activeChart, layoutInfo(layout).count - 1) })),
       setReplayBarPos: (replayBarPos) => set({ replayBarPos }),
       setActiveChart: (activeChart) => set((s) => (s.activeChart === activeChart ? {} : { activeChart })),
+      setIndicatorDefaults: (type, settings) =>
+        set((s) => {
+          const next = { ...s.indicatorDefaults }
+          if (settings) next[type] = settings
+          else delete next[type]
+          return { indicatorDefaults: next }
+        }),
     }),
     {
       name: APP_KEY,
@@ -106,6 +118,7 @@ export const useAppStore = create<AppState>()(
         layout: s.layout,
         activeChart: s.activeChart,
         replayBarPos: s.replayBarPos,
+        indicatorDefaults: s.indicatorDefaults,
       }),
     },
   ),

@@ -68,14 +68,21 @@ nên có thể thêm nguồn mới (sàn khác, chứng khoán VN, server riêng
 - Settings vị thế (vốn, lot, rủi ro, đòn bẩy) + P&L theo giá thực tế
 - Tìm mã / thêm mã vào Watchlist như TradingView; nguồn OANDA (XAUUSD, forex) + Binance
 - **Song ngữ EN / VI** (i18n có kiểm tra kiểu: thiếu bản dịch là lỗi biên dịch)
-- **RSI (14)** trong pane riêng (RMA như `ta.rsi` của TradingView), cập nhật cả khi realtime & replay
+- **Chỉ báo** (hộp thoại *Indicators* có nhóm + tìm kiếm, phím `/`): 39 chỉ báo tính như `ta.*` của TradingView —
+  MA / EMA / WMA / SMMA / HMA / VWMA, Bollinger, Keltner, Donchian, Envelope, Ichimoku, Parabolic SAR, Supertrend, VWAP;
+  RSI, MACD, Stochastic, Stoch RSI, CCI, Williams %R, Momentum, ROC, AO, DMI/ADX, Aroon, ATR, BB %B, BBW, OBV, MFI, CMF;
+  khối lượng: Volume, **VSA Volume** (tô cột theo mức khối lượng + tín hiệu UT/BC/ND/SC/SV/T/NS), A/D, Volume Oscillator,
+  PVT, Elder Force Index, Ease of Movement, Klinger.
+  Settings: Inputs (offset, loại MA…), Style (màu + độ đục, kiểu vẽ line/step/histogram/circles, độ dày, kiểu nét,
+  mức ngang, màu nền, độ chính xác, nhãn trên thang giá, giá trị / tham số trên legend), Visibility theo khung thời gian;
+  xem trước trực tiếp, Cancel hoàn lại, Save as default. Legend: ẩn / cài đặt / xoá / nhân bản
 - **Invert scale** (`Alt + I`)
 - Watchlist với giá & % thay đổi 24h realtime
 - Fallback dữ liệu Demo khi không kết nối được Binance
 
 ### Giai đoạn 2 — Giống TradingView hơn
 - Kiểu biểu đồ: Bars, Line, Area, Heikin Ashi, Hollow candles
-- Indicator overlay (MA, EMA, Bollinger) và pane riêng (MACD, Stoch); tuỳ chỉnh tham số indicator
+- Thêm chỉ báo (Volume Profile, Pivot Points…), chỉ báo trên chỉ báo, mây Ichimoku vẽ tới vùng tương lai, undo/redo cho chỉ báo
 - Hình vẽ: magnet mode, nhớ style cuối cùng cho mỗi công cụ, thêm công cụ (Parallel Channel, Pitchfork, Brush, Date/Price Range)
 - Vị thế: tab Style (màu vùng lời/lỗ), lưu settings làm mặc định cho vị thế mới
 - Replay nâng cao: replay trên khung nhỏ hơn, lùi nến (step back)
